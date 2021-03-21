@@ -9,9 +9,40 @@
     ></script>
     <script defer>
       const socket = io("ws://localhost:1337");
-      // socket.on("connect", () => {
-      //   console.log("connected!");
-      // });
+
+      const request = (name, args) =>
+        new Promise((resolve, reject) => {
+          const id = setTimeout(
+            () => reject({ error: "Request timed out" }),
+            5000
+          );
+
+          socket.emit(name, args, response => {
+            clearTimeout(id);
+            if (response.hasOwnProperty("error")) {
+              reject(response);
+            } else {
+              resolve(response);
+            }
+          });
+        });
+
+      socket.emit("EXAMPLE_SYNC");
+
+      socket.on("EXAMPLE_SYNC_RESPONSE", response => {
+        console.log(response);
+      });
+
+      (async () => {
+        try {
+          const pkg = { user: "kortes" };
+          console.log(`Sending: ${JSON.stringify(pkg)}`);
+          const result = await request("EXAMPLE_ASYNC", pkg);
+          console.log(`Got back: ${JSON.stringify(result)}`);
+        } catch ({ error }) {
+          console.error(error);
+        }
+      })();
     </script>
   </head>
   <body>
