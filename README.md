@@ -25,6 +25,21 @@ export default async (body, socket, io, extra) => {
 
 Omitting the `async` keyword will treat the event as a regular socket io emit event.
 
+## On the client
+
+`index.html` is a temporary inclusion to this repo only to showcase how `request` works. The idea is simple:
+
+```
+(async () => {
+  try {
+    const result = await request("EXAMPLE_ASYNC", { somedata: "for the backend" });
+    console.log(JSON.stringify(result));
+  } catch ({ error }) {
+    console.error(error);
+  }
+})();
+```
+
 ## Todo
 
 Make this package double purpose in the sense of:
