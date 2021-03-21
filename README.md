@@ -1,10 +1,15 @@
 # REPO IS WORK IN PROGRESS
 
-## Get a REST from multiple API's
+## Get a REST from REST
 
 Working with web services nowadays most oftenly means you'll be presenting and/or calling a REST api.
 
 Using conduit you can use `async` & `await` with socket-io, expecting a response instead of optimistically waiting for one with `socket.on('EVENT')`.
+
+This means that conduit is supposed to replace your standard REST api, but also deal with realtime socket transmits.
+
+Example:
+Let's say you make an online multiplayer game. For the account creation and login functionality you use `request`. For regular socket-io uses you use `emit`.
 
 ## How to
 
