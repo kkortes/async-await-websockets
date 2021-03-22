@@ -5,7 +5,7 @@
 - Is a socket.io server that can handle async/await calls
 - Exposes a `request` function which can be used on the client in order to make a async/await call
 
-## How to
+## Setup
 
 1. `mkdir my-server`
 2. `cd my-server`
@@ -67,7 +67,7 @@ Provide configuration (https://socket.io/docs/v3/server-api/index.html) of your 
 
 `PPW` returns an `io`-instance which you can create custom socket.io functionality on.
 
-`somedir` should contain `someEvent.js`-files. These files are scanned and available as `socket.emit('someEvent')` on the client.
+`somedir` should contain `.js`-files. These files are scanned and available as `request('fileName')` on the client.
 
 This is the signature for any `.js` file within `somedir`
 
@@ -78,7 +78,7 @@ export default async (body, socket, io, hooks) => {
 }
 ```
 
-Omitting the `async` keyword will treat the event as a regular socket io emit event.
+Omitting the `async` keyword will treat the event as a regular socket.io emit event.
 
 ## Your client
 
