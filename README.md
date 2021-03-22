@@ -1,36 +1,56 @@
 # REPO IS WORK IN PROGRESS
 
-## Copy all files within this repo to create your own server
+## ping-pong-websockets..
 
-`npx degit kkortes/conduit my-conduit-backend-server`
-
-## Get a REST from REST
-
-Working with web services nowadays most oftenly means you'll be presenting and/or calling a REST api.
-
-Using conduit you can use `async` & `await` with socket-io, expecting a response instead of optimistically waiting for one with `socket.on('EVENT')`.
-
-This means that conduit is supposed to replace your standard REST api, but also deal with realtime socket transmits.
-
-Example:
-Let's say you make an online multiplayer game. For the account creation and login functionality you use `request`. For regular socket-io uses you use `emit`.
+- Is a socket.io server that can handle async/await calls
+- Exploses a `request` function which can be used on the client in order to make a async/await call
 
 ## How to
 
-This repo presents an `endpoints`-directory. Every file in it automatically becomes an endpoint to which you can `emit` (syncronous) or `request` (asyncronous).
-
-The signature for every asyncronous event is:
+1. `mkdir my-server`
+2. `cd my-server`
+3. `npm init`
+4. Add to package.json
 
 ```
-export default async (body, socket, io, extra) => {
-  const response = await extra.mongo.insertSomething();
+"main": "server.js",
+"scripts": {
+  "dev": "node server.js"
+},
+```
+
+5. `npm install ping-pong-websockets`
+6. Create `server.js` with contents:
+
+```
+import PPW from "ping-pong-websockets/index.js";
+
+PPW("somedir");
+```
+
+7. Add directory `somedir`
+8. `npm run dev`
+
+Your server should now be started on http://localhost:1337.
+
+## Your server
+
+`PPW` returns an `io` instance which you can create custom socket.io functionality on
+
+`somedir` should contain `someEvent.js`-files, these files are scanned and available as `socket.emit('someEvent')` on the client
+
+This is the signature for any `.js` file within `somedir`
+
+```
+export default async (body, socket, io, hooks) => {
+  const response = await hooks.mongo.insertSomething();
   return response;
 }
 ```
 
 Omitting the `async` keyword will treat the event as a regular socket io emit event.
 
-## On the client
+## Your client
 
 `index.html` is a temporary inclusion to this repo only to showcase how `request` works. The idea is simple:
 
@@ -44,10 +64,3 @@ Omitting the `async` keyword will treat the event as a regular socket io emit ev
   }
 })();
 ```
-
-## Todo
-
-Make this package double purpose in the sense of:
-
-- Being able to grab a copy of it and create your own API backend
-- Being able to `import { socket, request } from 'conduit'` on the client. Allowing you to use `request` in order to do `async`/`await` requests
