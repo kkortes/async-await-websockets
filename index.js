@@ -1,6 +1,22 @@
 import fs from "fs";
 import { Server } from "socket.io";
 
+export const asyncEmit = (name, args, timeout = 3000) =>
+  new Promise((resolve, reject) => {
+    const id = setTimeout(
+      () => reject({ error: "Conduit client error: Request timed out" }),
+      timeout
+    );
+    socket.emit(name, args, response => {
+      clearTimeout(id);
+      if (response.hasOwnProperty("error")) {
+        reject(response);
+      } else {
+        resolve(response);
+      }
+    });
+  });
+
 const serveEndpoints = (io, socket, extra, path) =>
   fs.readdirSync(`${process.cwd()}/${path}`).forEach(async directory => {
     const { default: defaultExport } = await import(

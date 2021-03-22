@@ -10,7 +10,7 @@
     <script>
       const socket = io("ws://localhost:1337");
 
-      const request = (name, args) =>
+      const asyncEmit = (name, args) =>
         new Promise((resolve, reject) => {
           const id = setTimeout(
             () => reject({ error: "Conduit client error: Request timed out" }),
@@ -25,17 +25,18 @@
             }
           });
         });
-      // socket.emit("example-sync");
 
-      // socket.on("example-sync-response", response => {
-      //   console.log(response);
-      // });
+      socket.emit("example-sync");
+
+      socket.on("example-sync-response", response => {
+        console.log(response);
+      });
 
       (async () => {
         try {
           const pkg = { user: "kortes" };
           console.log(`Sending: ${JSON.stringify(pkg)}`);
-          const result = await request("example-async", pkg);
+          const result = await asyncEmit("example-async", pkg);
           console.log(`Got back: ${JSON.stringify(result)}`);
         } catch ({ error }) {
           console.error(error);

@@ -1,7 +1,7 @@
 {
-  "name": "conduit",
+  "name": "async-await-websockets",
   "version": "1.0.0",
-  "description": "",
+  "description": "An async/await solution to websockets",
   "main": "index.js",
   "type": "module",
   "author": "Kkortes",
