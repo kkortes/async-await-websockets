@@ -100,7 +100,7 @@ Omitting the `async` keyword will treat the event as a regular socket io emit ev
 When calling `request('someEvent')` there are two possible failures:
 
 1. The call to your socket server timed out (happens on the client).
-2. The error threw an error because something went wrong.
+2. The server threw an error because something went wrong.
 
 In both cases `request` will throw an object that contains a error-message like so:
 
