@@ -7,37 +7,21 @@
       integrity="sha384-cPwlPLvBTa3sKAgddT6krw0cJat7egBga3DJepJyrLl4Q9/5WLra3rrnMcyTyOnh"
       crossorigin="anonymous"
     ></script>
-    <script defer>
+    <script src="index.js"></script>
+    <script>
       const socket = io("ws://localhost:1337");
 
-      const request = (name, args) =>
-        new Promise((resolve, reject) => {
-          const id = setTimeout(
-            () => reject({ error: "Request timed out" }),
-            5000
-          );
+      // socket.emit("example-sync");
 
-          socket.emit(name, args, response => {
-            clearTimeout(id);
-            if (response.hasOwnProperty("error")) {
-              reject(response);
-            } else {
-              resolve(response);
-            }
-          });
-        });
-
-      socket.emit("EXAMPLE_SYNC");
-
-      socket.on("EXAMPLE_SYNC_RESPONSE", response => {
-        console.log(response);
-      });
+      // socket.on("example-sync-response", response => {
+      //   console.log(response);
+      // });
 
       (async () => {
         try {
           const pkg = { user: "kortes" };
           console.log(`Sending: ${JSON.stringify(pkg)}`);
-          const result = await request("EXAMPLE_ASYNC", pkg);
+          const result = await request("example-async", pkg);
           console.log(`Got back: ${JSON.stringify(result)}`);
         } catch ({ error }) {
           console.error(error);

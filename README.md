@@ -23,12 +23,8 @@ The signature for every asyncronous event is:
 
 ```
 export default async (body, socket, io, extra) => {
-   try {
-     const response = await extra.mongo.insertSomething();
-     return response;
-   } catch(error) {
-     return { error: error.toString() }
-   }
+  const response = await extra.mongo.insertSomething();
+  return response;
 }
 ```
 
@@ -41,7 +37,7 @@ Omitting the `async` keyword will treat the event as a regular socket io emit ev
 ```
 (async () => {
   try {
-    const result = await request("EXAMPLE_ASYNC", { somedata: "for the backend" });
+    const result = await request("example-async", { somedata: "for the backend" });
     console.log(JSON.stringify(result));
   } catch ({ error }) {
     console.error(error);
