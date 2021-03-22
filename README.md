@@ -1,5 +1,9 @@
 # REPO IS WORK IN PROGRESS
 
+## Copy all files within this repo to create your own server
+
+`npx degit kkortes/conduit my-conduit-backend-server`
+
 ## Get a REST from REST
 
 Working with web services nowadays most oftenly means you'll be presenting and/or calling a REST api.
@@ -49,5 +53,5 @@ Omitting the `async` keyword will treat the event as a regular socket io emit ev
 
 Make this package double purpose in the sense of:
 
-- Being able to fork it and use as an API backend
+- Being able to grab a copy of it and create your own API backend
 - Being able to `import { socket, request } from 'conduit'` on the client. Allowing you to use `request` in order to do `async`/`await` requests
