@@ -61,13 +61,13 @@ Provide configuration (https://socket.io/docs/v3/server-api/index.html) of your 
 }
 ```
 
-(not that cors is required since socket.io version 4.0.0 and should be changed from "\*" in production)
+(note that cors is required since socket.io version 4.0.0 and should never be \* in production)
 
 ## Your server
 
-`PPW` returns an `io` instance which you can create custom socket.io functionality on
+`PPW` returns an `io`-instance which you can create custom socket.io functionality on.
 
-`somedir` should contain `someEvent.js`-files, these files are scanned and available as `socket.emit('someEvent')` on the client
+`somedir` should contain `someEvent.js`-files. These files are scanned and available as `socket.emit('someEvent')` on the client.
 
 This is the signature for any `.js` file within `somedir`
 
@@ -93,4 +93,19 @@ Omitting the `async` keyword will treat the event as a regular socket io emit ev
     console.error(error);
   }
 })();
+```
+
+## Error handling
+
+When calling `request('someEvent')` there are two possible failures:
+
+1. The call to your socket server timed out (happens on the client).
+2. The error threw an error because something went wrong.
+
+In both cases `request` will throw an object that contains a error-message like so:
+
+```
+{
+  error: "What went wrong"
+}
 ```
