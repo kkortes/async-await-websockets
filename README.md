@@ -3,7 +3,7 @@
 ## ping-pong-websockets..
 
 - Is a socket.io server that can handle async/await calls
-- Exploses a `request` function which can be used on the client in order to make a async/await call
+- Exposes a `request` function which can be used on the client in order to make a async/await call
 
 ## How to
 
@@ -32,6 +32,36 @@ PPW("somedir");
 8. `npm run dev`
 
 Your server should now be started on http://localhost:1337.
+
+## Configuration
+
+`PPW(path, hooks, port, config)`
+
+### path (string)
+
+Provide a string pointing at `somedir` (or some other directory of your liking)
+
+### hooks (object)
+
+Pass an object containing references to various services that you want to use in your socket calls (such as MongoDB / Redis and so on..)
+
+### port (integer)
+
+Provide a port of your liking. Defaults to 1337.
+
+### config (object)
+
+Provide configuration (https://socket.io/docs/v3/server-api/index.html) of your liking. Defaults to:
+
+```
+{
+  cors: {
+    origin: "*",
+  },
+}
+```
+
+(not that cors is required since socket.io version 4.0.0 and should be changed from "\*" in production)
 
 ## Your server
 
