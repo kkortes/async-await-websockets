@@ -17,13 +17,13 @@
 },
 ```
 
-5. `npm install ping-pong-websockets`
+5. `npm install async-await-websockets`
 6. Create `server.js` with contents:
 
 ```
-import PPW from "ping-pong-websockets/index.js";
+import AAW from "async-await-websockets/index.js";
 
-PPW("somedir");
+AAW("somedir");
 ```
 
 7. Add directory `somedir`
@@ -85,7 +85,7 @@ Omitting the `async` keyword will treat the event as a regular socket.io emit ev
 `example.html` is a temporary inclusion to this repo only to showcase how `asyncEmit` works. The idea is simple:
 
 ```
-import { asyncEmit } from 'async-await-websockets';
+import asyncEmit from 'async-await-websockets/asyncEmit.js';
 
 (async () => {
   try {
