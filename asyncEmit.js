@@ -1,4 +1,8 @@
-export default (name, args, timeout = 3000) =>
+import { io } from "socket.io-client";
+
+let socket = {};
+
+export const asyncEmit = (name, args, timeout = 3000) =>
   new Promise((resolve, reject) => {
     const id = setTimeout(
       () => reject({ error: "Conduit client error: Request timed out" }),
@@ -13,3 +17,8 @@ export default (name, args, timeout = 3000) =>
       }
     });
   });
+
+export default url => {
+  socket = io(url);
+  return socket;
+};
