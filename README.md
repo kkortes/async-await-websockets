@@ -34,7 +34,7 @@ AAW("somedir");
 7. Add directory `somedir`
 8. `npm run dev`
 
-Your server should now be started on http://localhost:1337.
+Your server should now be reachable on ws://localhost:1337
 
 ## Configuration
 
