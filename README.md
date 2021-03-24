@@ -68,7 +68,7 @@ Provide configuration (https://socket.io/docs/v3/server-api/index.html) of your 
 
 ## Your server
 
-`PPW` returns an `io`-instance which you can create custom socket.io functionality on.
+`AAW` returns an `io`-instance which you can create custom socket.io functionality on.
 
 `somedir` should contain `.js`-files. These files are scanned and available as `asyncEmit('fileName')` on the client.
 
