@@ -26,7 +26,7 @@
 6. Create `server.js` with contents:
 
 ```
-import AAW from "async-await-websockets/index.js";
+import AAW from "async-await-websockets";
 
 AAW("somedir");
 ```
