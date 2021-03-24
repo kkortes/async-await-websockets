@@ -5,7 +5,7 @@ let socket = undefined;
 const asyncEmit = (name, args, timeout) =>
   new Promise((resolve, reject) => {
     const id = setTimeout(
-      () => reject({ error: "Conduit client error: Request timed out" }),
+      () => reject({ error: "Aaw client error: Request timed out" }),
       timeout
     );
     socket.emit(name, args, response => {
@@ -21,7 +21,7 @@ const asyncEmit = (name, args, timeout) =>
 export default url =>
   new Promise(resolve => {
     if (!socket) {
-      socket = io(url);
+      socket = io.connect(url);
 
       socket.on("connect", () => {
         socket.asyncEmit = (name, args, timeout = 3000) =>

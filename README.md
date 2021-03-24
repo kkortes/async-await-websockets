@@ -87,14 +87,13 @@ Omitting the `async` keyword will treat the event as a regular socket.io emit ev
 
 `npm install async-await-websockets`
 
-`example.html` is a temporary inclusion to this repo only to showcase how `asyncEmit` works. The idea is simple:
-
 ```
-import asyncEmit from 'async-await-websockets/asyncEmit.js';
+import io from 'async-await-websockets/asyncEmit.js';
 
 (async () => {
   try {
-    const result = await asyncEmit("example-async", { somedata: "for the backend" });
+    const socket = await io.default("ws://localhost:1337");
+    const result = await socket.asyncEmit("example-async", { somedata: "for the backend" });
     console.log(JSON.stringify(result));
   } catch ({ error }) {
     console.error(error);

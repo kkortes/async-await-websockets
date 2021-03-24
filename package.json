@@ -3,6 +3,7 @@
   "version": "1.0.3",
   "description": "An async/await solution to websockets",
   "main": "index.js",
+  "browser": "asyncEmit.js",
   "type": "module",
   "author": "Kkortes",
   "license": "ISC",
