@@ -4,10 +4,14 @@
 
 ## async-await-websockets
 
-- is a socket.io server that can handle `async/await` requests
-- exposes an `asyncEmit` function which can be used on the client in order to make an `async/await` request
+A tiny socket.io server which can handle `async/await` requests.
 
-## Setup
+This repo also packs a `async-await-websockets/client.js` which:
+
+- initiates a socket.io connection
+- adds the `socket.asyncEmit` functionality to your socket instance
+
+## How to create your own server
 
 1. `mkdir my-server`
 2. `cd my-server`
@@ -26,35 +30,43 @@
 6. Create `server.js` with contents:
 
 ```
-import AAW from "async-await-websockets";
+import aaw from "async-await-websockets";
 
-AAW("somedir");
+aaw("endpoints");
 ```
 
-7. Add directory `somedir`
+7. Add directory `endpoints`
 8. `npm run dev`
 
 Your server should now be reachable on ws://localhost:1337
 
 ## Configuration
 
-`AAW(path, hooks, port, config)`
+`aaw(path, hooks, port, config)`
 
 ### path (string)
 
-Provide a string pointing at `somedir` (or some other directory of your liking)
+Name of directory that holds your socket events.
+
+Default: `endpoints`
 
 ### hooks (object)
 
-Pass an object containing references to various services that you want to use in your socket calls (such as MongoDB / Redis and so on..)
+Additional instances that you need access to in your socket events (MongoDB for example).
+
+Default: `{}`
 
 ### port (integer)
 
-Provide a port of your liking. Defaults to 1337.
+A port of your liking.
+
+Default: `1337`
 
 ### config (object)
 
-Provide configuration (https://socket.io/docs/v3/server-api/index.html) of your liking. Defaults to:
+Server configuration (https://socket.io/docs/v3/server-api/index.html) of your liking.
+
+Default:
 
 ```
 {
@@ -64,19 +76,19 @@ Provide configuration (https://socket.io/docs/v3/server-api/index.html) of your 
 }
 ```
 
-(note that cors is required since socket.io version 4.0.0 and should never be \* in production)
+(note that cors is required since socket.io version 4.0.0 and should never be the default \* in production)
 
 ## Your server
 
-`AAW` returns an `io`-instance which you can create custom socket.io functionality on.
+`aaw` returns an `io`-instance which you can create custom socket.io functionality on.
 
-`somedir` should contain `.js`-files. These files are scanned and available as `asyncEmit('fileName')` on the client.
+`endpoints` should contain `.js`-files. These files are scanned and will be callable with `socket.asyncEmit('fileName')`.
 
-This is the signature for any `.js` file within `somedir`
+This is the signature for any `.js` file within `endpoints`.
 
 ```
-export default async (body, socket, io, hooks) => {
-  const response = await hooks.mongo.insertSomething();
+export default async (body, _socket, _io, hooks) => {
+  const response = await hooks.mongo.insertSomething(body.id);
   return response;
 }
 ```
@@ -88,7 +100,7 @@ Omitting the `async` keyword will treat the event as a regular socket.io emit ev
 `npm install async-await-websockets`
 
 ```
-import io from 'async-await-websockets/asyncEmit.js';
+import io from 'async-await-websockets/client.js';
 
 (async () => {
   try {
@@ -101,9 +113,12 @@ import io from 'async-await-websockets/asyncEmit.js';
 })();
 ```
 
+Please note that initating a socket connection happens in two steps. You can globally set the socket elsewhere in step 1:
+`const socket = await io.default("ws://localhost:1337");` and access socket anywhere in your app.
+
 ## Error handling
 
-When calling `asyncEmit('someEvent')` there are two possible failures:
+When calling `socket.asyncEmit('someEvent')` there are two possible failures:
 
 1. The call to your socket server timed out (happens on the client).
 2. The server threw an error because something went wrong.

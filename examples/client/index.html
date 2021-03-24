@@ -9,7 +9,7 @@
       socket.asyncEmit = (name, args, timeout = 3000) =>
         new Promise((resolve, reject) => {
           const id = setTimeout(
-            () => reject({ error: "Aaw client error: Request timed out" }),
+            () => reject({ error: "Socket error (client): request timed out" }),
             timeout
           );
           socket.emit(name, args, response => {
@@ -27,7 +27,9 @@
       });
 
       const regularEmit = () => {
-        socket.emit("example-sync");
+        socket.emit("example-sync", {
+          somedata: "for the server",
+        });
       };
 
       const runAsyncEmit = async () => {

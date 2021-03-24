@@ -14,14 +14,14 @@ const serveEndpoints = (io, socket, extra, path) =>
             try {
               result = await defaultExport(body, io, socket, extra);
             } catch (error) {
-              result = { error: `Aaw server error: ${error.toString()}` };
+              result = { error: `Socket error (server): ${error.toString()}` };
             }
             return callback(result);
           }
         : (body, callback) =>
-            callback
+            console.log(body) || callback
               ? callback({
-                  error: `Aaw server error: the function you called isn't asyncronous`,
+                  error: `Socket error (server): the function you called isn't asyncronous`,
                 })
               : defaultExport(body, io, socket, extra)
     );

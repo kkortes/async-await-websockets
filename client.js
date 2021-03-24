@@ -5,7 +5,7 @@ let socket = undefined;
 const asyncEmit = (name, args, timeout) =>
   new Promise((resolve, reject) => {
     const id = setTimeout(
-      () => reject({ error: "Aaw client error: Request timed out" }),
+      () => reject({ error: "Socket error (client): request timed out" }),
       timeout
     );
     socket.emit(name, args, response => {
