@@ -16,6 +16,7 @@
 
 ```
 "main": "server.js",
+"type": "module",
 "scripts": {
   "dev": "node server.js"
 },
