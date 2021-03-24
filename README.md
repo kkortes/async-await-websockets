@@ -38,7 +38,7 @@ Your server should now be reachable on ws://localhost:1337
 
 ## Configuration
 
-`PPW(path, hooks, port, config)`
+`AAW(path, hooks, port, config)`
 
 ### path (string)
 
