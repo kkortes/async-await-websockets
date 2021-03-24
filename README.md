@@ -5,7 +5,7 @@
 ## async-await-websockets
 
 - is a socket.io server that can handle `async/await` requests
-- exposes a `asyncEmit` function which can be used on the client in order to make a `async/await` request
+- exposes an `asyncEmit` function which can be used on the client in order to make an `async/await` request
 
 ## Setup
 
@@ -109,7 +109,7 @@ When calling `asyncEmit('someEvent')` there are two possible failures:
 1. The call to your socket server timed out (happens on the client).
 2. The server threw an error because something went wrong.
 
-In both cases `asyncEmit` will throw an object that contains a error-message like so:
+In both cases `asyncEmit` will throw an object that contains an error-message like so:
 
 ```
 {
