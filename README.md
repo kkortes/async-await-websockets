@@ -19,23 +19,22 @@ This repo also packs a `async-await-websockets/client.js` which:
 4. Add to package.json
 
 ```
-"main": "server.js",
 "type": "module",
 "scripts": {
-  "dev": "node server.js"
+  "dev": "node index.js"
 },
 ```
 
 5. `npm install async-await-websockets`
-6. Create `server.js` with contents:
+6. Create `index.js` with contents:
 
 ```
 import aaw from "async-await-websockets";
 
-aaw("endpoints");
+aaw("events");
 ```
 
-7. Add directory `endpoints`
+7. Add directory `events`
 8. `npm run dev`
 
 Your server should now be reachable on ws://localhost:1337
@@ -48,7 +47,7 @@ Your server should now be reachable on ws://localhost:1337
 
 Name of directory that holds your socket events.
 
-Default: `endpoints`
+Default: `events`
 
 ### hooks (object)
 
@@ -76,15 +75,15 @@ Default:
 }
 ```
 
-(note that cors is required since socket.io version 4.0.0 and should never be the default \* in production)
+(note: cors is required since socket.io version 4.0.0 and should never be the default \* in production)
 
 ## Your server
 
 `aaw` returns an `io`-instance which you can create custom socket.io functionality on.
 
-`endpoints` should contain `.js`-files. These files are scanned and will be callable with `socket.asyncEmit('fileName')`.
+`events` should contain `.js`-files. These files are scanned and will be callable with `socket.asyncEmit('fileName')`.
 
-This is the signature for any `.js` file within `endpoints`.
+This is the signature for any `.js` file within `events`.
 
 ```
 export default async (body, _socket, _io, hooks) => {
@@ -100,21 +99,30 @@ Omitting the `async` keyword will treat the event as a regular socket.io emit ev
 `npm install async-await-websockets`
 
 ```
-import io from 'async-await-websockets/client.js';
+import io from 'async-await-websockets';
 
 (async () => {
   try {
     const socket = await io.default("ws://localhost:1337");
     const result = await socket.asyncEmit("example-async", { somedata: "for the backend" });
-    console.log(JSON.stringify(result));
+    console.log(result);
   } catch ({ error }) {
     console.error(error);
   }
 })();
 ```
 
-Please note that initating a socket connection happens in two steps. You can globally set the socket elsewhere in step 1:
-`const socket = await io.default("ws://localhost:1337");` and access socket anywhere in your app.
+- First `await` is to initialize the socket connection. `io.default` parameters:
+
+  - `url` (string, default `''`)
+
+- Second `await` is to retrieve information from the server. `socket.asyncEmit` parameters:
+
+  - `name` (string, required!)
+  - `payload` (any, default `undefined`)
+  - `timeout` (integer, default `3000`)
+
+In the above example we're doing these next to one another. You can split them up and define `socket` globally for your project.
 
 ## Error handling
 
