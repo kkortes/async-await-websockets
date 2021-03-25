@@ -2,7 +2,7 @@ import fs from "fs";
 import { Server } from "socket.io";
 
 const serveEndpoints = (io, socket, extra, path) =>
-  fs.readdirSync(`${process.cwd()}/${path}`).forEach(async directory => {
+  fs.readdirSync(`${process.cwd()}/${path}`).forEach(async (directory) => {
     const { default: defaultExport } = await import(
       `${process.cwd()}/${path}/${directory}`
     );
@@ -33,13 +33,18 @@ export default (
   port = 1337,
   config = {
     cors: {
-      origin: "*",
+      origin: ["*"],
     },
   }
 ) => {
   if (!path) throw new Error("Path must be set");
   const io = new Server(port, config);
-  io.on("connection", socket => serveEndpoints(io, socket, hooks, path));
-  console.log(`Server started on port ${port}`);
+
+  io.on("connection", (socket) => serveEndpoints(io, socket, hooks, path));
+  console.log(
+    `Server started on port :${port} accepting requests from ${JSON.stringify(
+      config?.cors?.origin
+    )}`
+  );
   return io;
 };
