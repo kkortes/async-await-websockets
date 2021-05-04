@@ -1,6 +1,6 @@
 {
   "name": "async-await-websockets",
-  "version": "1.0.8",
+  "version": "1.0.9",
   "description": "An async/await solution to websockets",
   "main": "server.js",
   "browser": "client.js",
@@ -8,7 +8,9 @@
   "author": "Kkortes",
   "license": "ISC",
   "dependencies": {
+    "bufferutil": "^4.0.3",
     "socket.io": "^4.0.0",
-    "socket.io-client": "^4.0.0"
+    "socket.io-client": "^4.0.0",
+    "utf-8-validate": "^5.0.5"
   }
 }
