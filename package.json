@@ -1,9 +1,9 @@
 {
   "name": "async-await-websockets",
-  "version": "1.0.9",
+  "version": "1.1.0",
   "description": "An async/await solution to websockets",
   "main": "server.js",
-  "browser": "client.js",
+  "module": "client.js",
   "type": "module",
   "author": "Kkortes",
   "license": "ISC",
