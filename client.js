@@ -10,7 +10,7 @@ const asyncEmit = (name, payload, timeout) =>
     );
     socket.emit(name, payload, response => {
       clearTimeout(id);
-      if (response.hasOwnProperty("error")) {
+      if (response?.error) {
         reject(response);
       } else {
         resolve(response);
