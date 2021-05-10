@@ -1,16 +1,18 @@
 import fs from "fs";
 import { Server } from "socket.io";
 
-const serveEndpoints = (io, socket, extra, path) =>
-  fs.readdirSync(`${process.cwd()}/${path}`).forEach(async (file) => {
-    if (fs.lstatSync(`${process.cwd()}/${path}/${file}`).isDirectory()) {
-      serveEndpoints(io, socket, extra, `${path}/${file}`);
+const serveEndpoints = (io, socket, extra, root, path = "") =>
+  fs.readdirSync(`${process.cwd()}/${root}/${path}`).forEach(async (file) => {
+    if (
+      fs.lstatSync(`${process.cwd()}/${root}/${path}/${file}`).isDirectory()
+    ) {
+      serveEndpoints(io, socket, extra, root, `${path}/${file}`);
     } else {
       const { default: defaultExport } = await import(
-        `${process.cwd()}/${path}/${file}`
+        `${process.cwd()}/${root}/${path}/${file}`
       );
       socket.on(
-        file.replace(".js", ""),
+        `${path}/${file}`.substring(1).replace(".js", ""),
         defaultExport.constructor.name === "AsyncFunction"
           ? async (body, callback) => {
               let result;
@@ -18,15 +20,15 @@ const serveEndpoints = (io, socket, extra, path) =>
                 result = await defaultExport(body, io, socket, extra);
               } catch (error) {
                 result = {
-                  error: `Socket error (server): ${error.toString()}`,
+                  error: error.toString(),
                 };
               }
               return callback(result);
             }
           : (body, callback) =>
-              console.log(body) || callback
+              callback
                 ? callback({
-                    error: `Socket error (server): the function you called isn't asyncronous`,
+                    error: "The function you called isn't asyncronous",
                   })
                 : defaultExport(body, io, socket, extra)
       );
@@ -34,7 +36,7 @@ const serveEndpoints = (io, socket, extra, path) =>
   });
 
 export default (
-  directory = "events",
+  root = "events",
   hooks = {},
   port = 1337,
   config = {
@@ -43,9 +45,9 @@ export default (
     },
   }
 ) => {
-  if (!directory) throw new Error("Directory must be set");
+  if (!root) throw new Error("Root must be set");
   const io = new Server(port, config);
-  io.on("connection", (socket) => serveEndpoints(io, socket, hooks, directory));
+  io.on("connection", (socket) => serveEndpoints(io, socket, hooks, root));
   console.log(`Server started on port ${port}`);
   return io;
 };
