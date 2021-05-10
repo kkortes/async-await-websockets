@@ -41,9 +41,9 @@ Your server should now be reachable on ws://localhost:1337
 
 ## Configuration
 
-`aaw(directory, hooks, port, config)`
+`aaw(root, hooks, port, config)`
 
-### directory (string)
+### root (string)
 
 Name of directory that holds your socket events.
 
