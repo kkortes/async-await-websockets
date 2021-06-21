@@ -8,6 +8,8 @@ const serveEndpoints = (io, socket, extra, root, path = "") =>
     ) {
       serveEndpoints(io, socket, extra, root, `${path}/${file}`);
     } else {
+      if (/(^|\/)\.[^\/\.]/g.test(file)) return;
+
       const { default: defaultExport } = await import(
         `${process.cwd()}/${root}/${path}/${file}`
       );
