@@ -8,7 +8,7 @@ const asyncEmit = (name, payload, timeout) =>
       () => reject({ error: "Socket error (client): request timed out" }),
       timeout
     );
-    socket.emit(name, payload, response => {
+    socket.emit(name, payload, (response) => {
       clearTimeout(id);
       if (response?.error) {
         reject(response);
@@ -18,10 +18,10 @@ const asyncEmit = (name, payload, timeout) =>
     });
   });
 
-export default (url = "") =>
-  new Promise(resolve => {
+export default (url = "", config = {}) =>
+  new Promise((resolve) => {
     if (!socket) {
-      socket = io.connect(url);
+      socket = io(url, config);
 
       socket.on("connect", () => {
         socket.asyncEmit = (name, payload, timeout = 3000) =>
