@@ -26,7 +26,6 @@ const serveEndpoints = (io, socket, extra, root, path, log) =>
               let response;
 
               try {
-                test();
                 response = await defaultExport(body, io, socket, extra);
                 if (typeof log === "function")
                   log(
