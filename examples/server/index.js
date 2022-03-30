@@ -4,4 +4,4 @@ dotenv.config();
 
 const { PORT, CORS_ORIGIN } = process.env;
 
-aaw("events", {}, PORT, { cors: { origin: CORS_ORIGIN } });
+aaw("events", {}, PORT, { cors: { origin: CORS_ORIGIN } }, true);

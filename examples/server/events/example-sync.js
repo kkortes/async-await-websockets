@@ -1,8 +1,10 @@
 export default (body, _socket, io, hooks) => {
-  io.emit("example-sync-response", {
+  const data = {
     dataFrom: "events/example-sync.js",
     delivered: "non-deterministically",
     body,
     hooks,
-  });
+  };
+  io.emit("example-sync-response", data);
+  return data;
 };
