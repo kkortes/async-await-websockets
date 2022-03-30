@@ -1,10 +1,10 @@
 import fs from "fs";
 import { Server } from "socket.io";
 
-const serveEndpoints = (io, socket, extra, root, path, logs) =>
+const serveEndpoints = (io, socket, extra, root, path, log) =>
   fs.readdirSync(`${process.cwd()}/${root}${path}`).forEach(async (file) => {
     if (fs.lstatSync(`${process.cwd()}/${root}${path}/${file}`).isDirectory()) {
-      serveEndpoints(io, socket, extra, root, `${path}/${file}`, logs);
+      serveEndpoints(io, socket, extra, root, `${path}/${file}`, log);
     } else {
       if (/(^|\/)\.[^\/\.]/g.test(file)) return;
 
@@ -12,11 +12,12 @@ const serveEndpoints = (io, socket, extra, root, path, logs) =>
         `${process.cwd()}/${root}${path}/${file}`
       );
       const logPac = {
-        event: `${root}${path}/${file}`,
+        event: file.replace(".js", ""),
         socketID: socket.id,
-        type: undefined,
+        async: true,
         body: undefined,
         response: undefined,
+        error: false,
       };
       socket.on(
         `${path}/${file}`.substring(1).replace(".js", ""),
@@ -25,25 +26,30 @@ const serveEndpoints = (io, socket, extra, root, path, logs) =>
               let response;
 
               try {
+                test();
                 response = await defaultExport(body, io, socket, extra);
-                if (logs)
-                  console.debug({
-                    ...logPac,
-                    type: "async",
-                    body,
-                    response,
-                  });
+                if (typeof log === "function")
+                  log(
+                    {
+                      ...logPac,
+                      body,
+                      response,
+                    },
+                    console.debug
+                  );
               } catch (error) {
                 response = {
                   error: error.toString(),
                 };
-                if (logs)
-                  console.error({
-                    ...logPac,
-                    type: "async",
-                    body,
-                    response,
-                  });
+                if (typeof log === "function")
+                  log(
+                    {
+                      ...logPac,
+                      body,
+                      error: error.toString(),
+                    },
+                    console.error
+                  );
               }
               return callback(response);
             }
@@ -57,24 +63,30 @@ const serveEndpoints = (io, socket, extra, root, path, logs) =>
               }
               try {
                 response = defaultExport(body, io, socket, extra);
-                if (logs)
-                  console.debug({
-                    ...logPac,
-                    type: "sync",
-                    body,
-                    response,
-                  });
+                if (typeof log === "function")
+                  log(
+                    {
+                      ...logPac,
+                      async: false,
+                      body,
+                      response,
+                    },
+                    console.debug
+                  );
               } catch (error) {
                 response = {
                   error: error.toString(),
                 };
-                if (logs)
-                  console.error({
-                    ...logPac,
-                    type: "sync",
-                    body,
-                    response,
-                  });
+                if (typeof log === "function")
+                  log(
+                    {
+                      ...logPac,
+                      async: false,
+                      body,
+                      error: error.toString(),
+                    },
+                    console.error
+                  );
               }
 
               return response;
@@ -92,12 +104,12 @@ export default (
       origin: "*",
     },
   },
-  logs = false
+  log = undefined
 ) => {
   if (!root) throw new Error("Root must be set");
   const io = new Server(port, config);
   io.on("connection", (socket) =>
-    serveEndpoints(io, socket, hooks, root, "", logs)
+    serveEndpoints(io, socket, hooks, root, "", log)
   );
   console.log(`Server started on port ${port}`);
   return io;
