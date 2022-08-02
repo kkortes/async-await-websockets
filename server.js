@@ -1,4 +1,6 @@
-import fs from "fs";
+import fs from "node:fs";
+import { normalize } from "node:path";
+import { pathToFileURL } from "node:url";
 import { Server } from "socket.io";
 
 const serveEndpoints = (io, socket, extra, root, path, log) =>
@@ -9,7 +11,7 @@ const serveEndpoints = (io, socket, extra, root, path, log) =>
       if (/(^|\/)\.[^\/\.]/g.test(file)) return;
 
       const { default: defaultExport } = await import(
-        `${process.cwd()}/${root}${path}/${file}`
+        pathToFileURL(normalize(`${process.cwd()}/${root}${path}/${file}`)).href
       );
       const logPac = {
         event: file.replace(".js", ""),
