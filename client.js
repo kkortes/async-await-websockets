@@ -18,18 +18,11 @@ const asyncEmit = (name, payload, timeout) =>
     });
   });
 
-export default (url = "", config = {}) =>
-  new Promise((resolve) => {
-    if (!socket) {
-      socket = io(url, config);
-
-      socket.on("connect", () => {
-        socket.asyncEmit = (name, payload, timeout = 3000) =>
-          asyncEmit(name, payload, timeout, socket);
-
-        resolve(socket);
-      });
-    } else {
-      resolve(socket);
-    }
-  });
+export default (url = "", config = { transports: ["websocket"] }) => {
+  if (!socket) {
+    socket = io(url, config);
+    socket.asyncEmit = (name, payload, timeout = 3000) =>
+      asyncEmit(name, payload, timeout, socket);
+  }
+  return socket;
+};
