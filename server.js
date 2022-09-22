@@ -105,10 +105,11 @@ export default (
       origin: "*",
     },
   },
+  server = undefined,
   log = undefined
 ) => {
   if (!root) throw new Error("Root must be set");
-  const io = new Server(port, config);
+  const io = new Server(server || port, config);
   io.on("connection", (socket) =>
     serveEndpoints(io, socket, hooks, root, "", log)
   );

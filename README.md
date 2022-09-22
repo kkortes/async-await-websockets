@@ -77,6 +77,18 @@ Default:
 
 (note: cors is required since socket.io version 4.0.0 and should never be the default \* in production)
 
+### server (nodejs server instance)
+
+If you want the socket server to attach to another server (for example a http-one) you can pass the node server here.
+
+Default: `undefined`
+
+### log (function)
+
+With the parameter signature `(event, socketID, async, error, body, response)` you can create custom server logging for all events called through `root`-directory.
+
+Default: `undefined`
+
 ## Your server
 
 `aaw` returns an `io`-instance which you can create custom socket.io functionality on.
