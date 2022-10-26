@@ -9,6 +9,7 @@ aaw(
   {},
   PORT,
   { cors: { origin: CORS_ORIGIN } },
+  undefined,
   ({ event, socketID, async, error, body, response }, log) => {
     const { version, accountName } = body;
     const toLog = [];

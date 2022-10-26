@@ -41,7 +41,7 @@ Your server should now be reachable on ws://localhost:1337
 
 ## Configuration
 
-`aaw(root, hooks, port, config)`
+`aaw(root, hooks, port, config, server, log)`
 
 ### root (string)
 
