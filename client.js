@@ -1,14 +1,14 @@
-import { io } from "socket.io-client";
+// import { io } from "socket.io-client";
 
-let socket = undefined;
+let ws = undefined;
 
 const asyncEmit = (name, payload, timeout) =>
   new Promise((resolve, reject) => {
     const id = setTimeout(
-      () => reject({ error: "Socket error (client): request timed out" }),
+      () => reject({ error: "WebSocket error (client): request timed out" }),
       timeout
     );
-    socket.emit(name, payload, (response) => {
+    ws.emit(name, payload, (response) => {
       clearTimeout(id);
       if (response?.error) {
         reject(response);
@@ -18,11 +18,12 @@ const asyncEmit = (name, payload, timeout) =>
     });
   });
 
-export default (url = "", config = { transports: ["websocket"] }) => {
-  if (!socket) {
-    socket = io(url, config);
-    socket.asyncEmit = (name, payload, timeout = 3000) =>
-      asyncEmit(name, payload, timeout, socket);
+export default (url = "") => {
+  if (!ws) {
+    ws = new WebSocket(url);
+
+    ws.asyncEmit = (name, payload, timeout = 3000) =>
+      asyncEmit(name, payload, timeout, ws);
   }
-  return socket;
+  return ws;
 };

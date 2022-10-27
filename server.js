@@ -1,7 +1,8 @@
 import fs from "node:fs";
 import { normalize } from "node:path";
 import { pathToFileURL } from "node:url";
-import { Server } from "socket.io";
+import ws, { WebSocketServer } from "ws";
+// import { Server } from "socket.io";
 
 const serveEndpoints = (io, socket, extra, root, path, log) =>
   fs.readdirSync(`${process.cwd()}/${root}${path}`).forEach(async (file) => {
@@ -109,10 +110,23 @@ export default (
   log = undefined
 ) => {
   if (!root) throw new Error("Root must be set");
-  const io = new Server(server || port, config);
-  io.on("connection", (socket) =>
-    serveEndpoints(io, socket, hooks, root, "", log)
-  );
+
+  // TODO: decide on (, config)
+  const wss = new WebSocketServer({
+    ...(server && { server }),
+    port,
+  });
+
+  wss.on("connection", (ws) => {
+    const eps = serveEndpoints(wss, ws, hooks, root, "", log);
+    console.log(eps);
+    ws.on("message", (data) => console.log(JSON.parse(data.toString())));
+    ws.send("get back");
+  });
+
+  // wss.on("connection", (socket) =>
+  //   serveEndpoints(wss, socket, hooks, root, "", log)
+  // );
   console.log(`Server started on port ${port}`);
-  return io;
+  return wss;
 };

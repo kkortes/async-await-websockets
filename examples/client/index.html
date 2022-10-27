@@ -2,47 +2,71 @@
 <html>
   <head>
     <meta charset="utf-8" />
-    <script src="socket.io.min.js"></script>
     <script>
-      const socket = io("ws://localhost:1337");
+      const socket = new WebSocket("ws://localhost:1337");
 
-      socket.asyncEmit = (name, payload, timeout = 3000) =>
-        new Promise((resolve, reject) => {
-          const id = setTimeout(
-            () => reject({ error: "Socket error (client): request timed out" }),
-            timeout
-          );
-          socket.emit(name, payload, (response) => {
-            clearTimeout(id);
-            if (response.hasOwnProperty("error")) {
-              reject(response);
-            } else {
-              resolve(response);
-            }
-          });
-        });
+      socket.addEventListener("open", (data) => {
+        console.log("connection opened!");
+        socket.send(
+          JSON.stringify({
+            test: "ar",
+            mega: ["object", 1, 2, 3],
+            testar: {
+              very: {
+                nested: {
+                  nodes: [
+                    {
+                      structure: true,
+                    },
+                  ],
+                },
+              },
+            },
+          })
+        );
+      });
 
-      socket.on("example-sync-response", (response) =>
-        console.log("This data was recieved on an event listener:\n", response)
-      );
+      socket.addEventListener("message", (data) => {
+        console.log(`recieved ${data}`);
+      });
 
-      const regularEmit = () =>
-        socket.emit("example-sync", {
-          somedata: "for the server",
-        });
+      // socket.asyncEmit = (name, payload, timeout = 3000) =>
+      //   new Promise((resolve, reject) => {
+      //     const id = setTimeout(
+      //       () => reject({ error: "Socket error (client): request timed out" }),
+      //       timeout
+      //     );
+      //     socket.emit(name, payload, (response) => {
+      //       clearTimeout(id);
+      //       if (response.hasOwnProperty("error")) {
+      //         reject(response);
+      //       } else {
+      //         resolve(response);
+      //       }
+      //     });
+      //   });
 
-      const runAsyncEmit = async () => {
-        try {
-          const response = await socket.asyncEmit("subdir/example-async", {
-            somedata: "for the server",
-            accountName: "Kortes",
-            error: "asdsad",
-          });
-          console.log("This data was recieved with async/await:\n", response);
-        } catch ({ error }) {
-          console.error(error);
-        }
-      };
+      // socket.on("example-sync-response", (response) =>
+      //   console.log("This data was recieved on an event listener:\n", response)
+      // );
+
+      // const regularEmit = () =>
+      //   socket.emit("example-sync", {
+      //     somedata: "for the server",
+      //   });
+
+      // const runAsyncEmit = async () => {
+      //   try {
+      //     const response = await socket.asyncEmit("subdir/example-async", {
+      //       somedata: "for the server",
+      //       accountName: "Kortes",
+      //       error: "asdsad",
+      //     });
+      //     console.log("This data was recieved with async/await:\n", response);
+      //   } catch ({ error }) {
+      //     console.error(error);
+      //   }
+      // };
     </script>
   </head>
   <body>
