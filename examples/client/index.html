@@ -5,25 +5,30 @@
     <script>
       const socket = new WebSocket("ws://localhost:1337");
 
+      socket.sendSync = (event, data) =>
+        socket.send(JSON.stringify([data, event]));
+
+      // TODO: add timeout and callback
+      socket.sendAsync = (event, data) =>
+        socket.send(JSON.stringify([data, event]));
+
       socket.addEventListener("open", (data) => {
         console.log("connection opened!");
-        socket.send(
-          JSON.stringify({
-            test: "ar",
-            mega: ["object", 1, 2, 3],
-            testar: {
-              very: {
-                nested: {
-                  nodes: [
-                    {
-                      structure: true,
-                    },
-                  ],
-                },
+        socket.sendSync("example-sync", {
+          test: "ar",
+          mega: ["object", 1, 2, 3],
+          testar: {
+            very: {
+              nested: {
+                nodes: [
+                  {
+                    structure: true,
+                  },
+                ],
               },
             },
-          })
-        );
+          },
+        });
       });
 
       socket.addEventListener("message", (data) => {
@@ -50,12 +55,12 @@
       //   console.log("This data was recieved on an event listener:\n", response)
       // );
 
-      // const regularEmit = () =>
-      //   socket.emit("example-sync", {
-      //     somedata: "for the server",
-      //   });
+      const sendSync = () =>
+        socket.sendSync("example-sync", {
+          somedata: "for the server",
+        });
 
-      // const runAsyncEmit = async () => {
+      // const sendAsync = async () => {
       //   try {
       //     const response = await socket.asyncEmit("subdir/example-async", {
       //       somedata: "for the server",
@@ -71,7 +76,7 @@
   </head>
   <body>
     <h1>async-await-websockets client</h1>
-    <button onclick="runAsyncEmit()">Run asyncEmit</button>
-    <button onclick="regularEmit()">Run regular emit</button>
+    <button onclick="sendAsync()">Send asyncronously</button>
+    <button onclick="sendSync()">Send syncronously</button>
   </body>
 </html>
