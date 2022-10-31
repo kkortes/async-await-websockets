@@ -1,6 +1,6 @@
-export default async (body, _socket, _io, hooks) => ({
-  dataFrom: "events/subdir/example-async.js",
+export default async (body, services) => ({
+  event: process.cwd(),
   delivered: "deterministically",
   body,
-  hooks,
+  services: Object.keys(services),
 });

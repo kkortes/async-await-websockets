@@ -4,11 +4,10 @@ import { pathToFileURL } from "node:url";
 import { WebSocketServer } from "ws";
 
 const serveEndpoints = async (root, path) => {
-  const eps = fetchEndpoints(root, path);
+  const endpoints = fetchEndpoints(root, path);
+  const results = await Promise.all(Object.values(endpoints));
 
-  const results = await Promise.all(Object.values(eps));
-
-  return Object.keys(eps).reduce((a, key, i) => {
+  return Object.keys(endpoints).reduce((a, key, i) => {
     const func = results[i].default;
     return func ? { ...a, [key]: func } : a;
   }, {});
@@ -25,7 +24,6 @@ const fetchEndpoints = (root, path, b = {}) => {
       return fetchEndpoints(root, `${path}/${file}`, a);
     } else {
       if (!/\.js$/.test(file)) return a;
-
       return {
         ...a,
         [`${path}/${file}`.substring(1).replace(".js", "")]: import(
@@ -34,153 +32,71 @@ const fetchEndpoints = (root, path, b = {}) => {
       };
     }
   }, b);
-
-  return filesAtDepth.forEach(async (file) => {
-    if (fs.lstatSync(`${fullPath}/${file}`).isDirectory()) {
-      serveEndpoints(wss, ws, extra, root, `${path}/${file}`, log);
-    } else {
-      if (/(^|\/)\.[^\/\.]/g.test(file)) return;
-
-      const { default: defaultExport } = await import(
-        pathToFileURL(normalize(`${fullPath}/${file}`)).href
-      );
-
-      const logPac = {
-        event: file.replace(".js", ""),
-        socketID: ws.id,
-        async: true,
-        body: undefined,
-        response: undefined,
-        error: false,
-      };
-
-      console.log("should come before `message`");
-
-      // ws.on(
-      //   `${path}/${file}`.substring(1).replace(".js", ""),
-      //   defaultExport.constructor.name === "AsyncFunction"
-      //     ? async (body, callback) => {
-      //         let response;
-
-      //         try {
-      //           response = await defaultExport(body, wss, ws, extra);
-      //           if (typeof log === "function")
-      //             log(
-      //               {
-      //                 ...logPac,
-      //                 body,
-      //                 response,
-      //               },
-      //               console.debug
-      //             );
-      //         } catch (error) {
-      //           response = {
-      //             error: error.toString(),
-      //           };
-      //           if (typeof log === "function")
-      //             log(
-      //               {
-      //                 ...logPac,
-      //                 body,
-      //                 error: error.toString(),
-      //               },
-      //               console.error
-      //             );
-      //         }
-      //         return callback(response);
-      //       }
-      //     : (body, callback) => {
-      //         let response;
-      //         if (callback) {
-      //           callback({
-      //             error: "The function you called isn't asyncronous",
-      //           });
-      //           return;
-      //         }
-      //         try {
-      //           response = defaultExport(body, wss, ws, extra);
-      //           if (typeof log === "function")
-      //             log(
-      //               {
-      //                 ...logPac,
-      //                 async: false,
-      //                 body,
-      //                 response,
-      //               },
-      //               console.debug
-      //             );
-      //         } catch (error) {
-      //           response = {
-      //             error: error.toString(),
-      //           };
-      //           if (typeof log === "function")
-      //             log(
-      //               {
-      //                 ...logPac,
-      //                 async: false,
-      //                 body,
-      //                 error: error.toString(),
-      //               },
-      //               console.error
-      //             );
-      //         }
-
-      //         return response;
-      //       }
-      // );
-    }
-  });
 };
 
-// TODO: throw away
-const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
-
 export default async (
-  root = "events",
-  hooks = {},
+  eventDir = "events",
+  services = {},
   port = 1337,
-  config = {
-    cors: {
-      origin: "*",
-    },
-  },
   server = undefined,
   log = undefined
 ) => {
-  if (!root) throw new Error("Root must be set");
+  if (!eventDir) throw new Error("`eventDir` must be set");
 
-  const eps = await serveEndpoints(root, "");
-  console.log(eps);
+  const endpoints = await serveEndpoints(eventDir, "");
 
-  // TODO: decide on (, config)
   const wss = new WebSocketServer({
     ...(server && { server }),
     port,
   });
 
-  //  const logPac = {
-  //    event: file.replace(".js", ""),
-  //    socketID: undefined, // TODO: ws.id,
-  //    async: true,
-  //    body: undefined,
-  //    response: undefined,
-  //    error: false,
-  //  };
+  // TODO: enable this properly
+  wss.broadcast = (data, sender) =>
+    wss.clients.forEach((client) => client !== sender && client.send(data));
 
-  wss.on("connection", (ws) => {
-    // TODO: store connections for ease of broadcast, give each connection its own unique id
-    // TODO: make sure old connections are being removed
-    // TODO old solution had `cors.origin = *` we need it now?
-    // TODO: readdirSync & lstatSync prevents ws.on from being run on first load on client
+  wss.on(
+    "connection",
+    (ws, { headers: { "sec-websocket-key": websocketKey } }) => {
+      // TODO: make sure old connections are being removed
+      // TODO old solution had `cors.origin = *` we need it now?
 
-    // const eps = serveEndpoints(wss, ws, hooks, root, "", log);
-    // console.log(eps);
+      ws.sendEvent = (event, data) => ws.send(JSON.stringify([data, event]));
 
-    ws.on("message", (msg) => {
-      const [data, event] = JSON.parse(msg.toString());
-      console.log({ data, event });
-    });
-  });
+      ws.on("message", (msg) => {
+        const [body, event] = JSON.parse(msg.toString());
+        const func = endpoints?.[event];
+        const resolution = func && func(body, { ws, ...services });
+
+        (async () => {
+          let response,
+            error,
+            async = func.constructor.name === "AsyncFunction";
+
+          try {
+            response = async ? await resolution : resolution;
+          } catch (err) {
+            error = err.toString();
+          }
+
+          async &&
+            ws.send(JSON.stringify([error ? { error } : response, event]));
+
+          typeof log === "function" &&
+            log(
+              {
+                event,
+                websocketKey,
+                async,
+                body,
+                response,
+                error,
+              },
+              console[error ? "error" : "debug"]
+            );
+        })();
+      });
+    }
+  );
 
   console.info(`Server started on port ${port}`);
   return wss;

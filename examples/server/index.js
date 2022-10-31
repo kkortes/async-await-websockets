@@ -6,17 +6,16 @@ const { PORT, CORS_ORIGIN } = process.env;
 
 aaw(
   "events",
-  {},
+  { thirdPartyService: "example" },
   PORT,
-  { cors: { origin: CORS_ORIGIN } },
   undefined,
-  ({ event, socketID, async, error, body, response }, log) => {
-    const { version, accountName } = body;
+  ({ event, websocketKey, async, error, body, response }, log) => {
+    const { version } = body;
     const toLog = [];
 
     toLog.push(`${error ? "🔴" : "🟢"} ${event}`);
     toLog.push(version || "n/a");
-    toLog.push(accountName || socketID);
+    toLog.push(websocketKey);
     if (error) toLog.push(error);
 
     log(toLog.join(" | "));

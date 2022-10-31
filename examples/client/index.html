@@ -2,81 +2,35 @@
 <html>
   <head>
     <meta charset="utf-8" />
+    <script src="../../client.js"></script>
     <script>
-      const socket = new WebSocket("ws://localhost:1337");
+      const { info, error } = console;
+      const { sendSync, sendAsync } = ws;
 
-      socket.sendSync = (event, data) =>
-        socket.send(JSON.stringify([data, event]));
+      ws.on("open", info);
+      ws.on("close", error);
+      ws.on("error", error);
+      ws.on("example-sync-response", info);
 
-      // TODO: add timeout and callback
-      socket.sendAsync = (event, data) =>
-        socket.send(JSON.stringify([data, event]));
+      const async = async () => {
+        try {
+          const response = await sendAsync("subdir/example-async", {
+            userName: "kortes",
+          });
+          console.info(response);
+        } catch ({ error }) {
+          console.error(error);
+        }
+      };
 
-      socket.addEventListener("open", (data) => {
-        console.log("connection opened!");
-        socket.sendSync("example-sync", {
-          test: "ar",
-          mega: ["object", 1, 2, 3],
-          testar: {
-            very: {
-              nested: {
-                nodes: [
-                  {
-                    structure: true,
-                  },
-                ],
-              },
-            },
-          },
-        });
+      const sync = sendSync.bind(undefined, "example-sync", {
+        userName: "kortes",
       });
-
-      socket.addEventListener("message", (data) => {
-        console.log(`recieved ${data}`);
-      });
-
-      // socket.asyncEmit = (name, payload, timeout = 3000) =>
-      //   new Promise((resolve, reject) => {
-      //     const id = setTimeout(
-      //       () => reject({ error: "Socket error (client): request timed out" }),
-      //       timeout
-      //     );
-      //     socket.emit(name, payload, (response) => {
-      //       clearTimeout(id);
-      //       if (response.hasOwnProperty("error")) {
-      //         reject(response);
-      //       } else {
-      //         resolve(response);
-      //       }
-      //     });
-      //   });
-
-      // socket.on("example-sync-response", (response) =>
-      //   console.log("This data was recieved on an event listener:\n", response)
-      // );
-
-      const sendSync = () =>
-        socket.sendSync("example-sync", {
-          somedata: "for the server",
-        });
-
-      // const sendAsync = async () => {
-      //   try {
-      //     const response = await socket.asyncEmit("subdir/example-async", {
-      //       somedata: "for the server",
-      //       accountName: "Kortes",
-      //       error: "asdsad",
-      //     });
-      //     console.log("This data was recieved with async/await:\n", response);
-      //   } catch ({ error }) {
-      //     console.error(error);
-      //   }
-      // };
     </script>
   </head>
   <body>
     <h1>async-await-websockets client</h1>
-    <button onclick="sendAsync()">Send asyncronously</button>
-    <button onclick="sendSync()">Send syncronously</button>
+    <button onclick="async()">Send asyncronously</button>
+    <button onclick="sync()">Send syncronously</button>
   </body>
 </html>

@@ -1,29 +1,43 @@
-// import { io } from "socket.io-client";
+const NATIVE_EVENTS = ["close", "error", "message", "open"];
 
-let ws = undefined;
+const initWebsocket = (url, protocols) => {
+  const ws = new WebSocket(url, protocols);
 
-const asyncEmit = (name, payload, timeout) =>
-  new Promise((resolve, reject) => {
-    const id = setTimeout(
-      () => reject({ error: "WebSocket error (client): request timed out" }),
-      timeout
-    );
-    ws.emit(name, payload, (response) => {
-      clearTimeout(id);
-      if (response?.error) {
-        reject(response);
-      } else {
-        resolve(response);
-      }
+  ws.sendSync = (event, data) => ws.send(JSON.stringify([data, event]));
+
+  ws.sendAsync = (event, data, timeout = 3000) =>
+    new Promise((resolve, reject) => {
+      const trigger = ({ detail }) => {
+        clearTimeout(id);
+        ws.removeEventListener(event, trigger);
+        detail?.error ? reject(detail) : resolve(detail);
+      };
+
+      const id = setTimeout(() => {
+        ws.removeEventListener(event, trigger);
+        reject({ error: "WebSocket error (client): request timed out" });
+      }, timeout);
+
+      ws.send(JSON.stringify([data, event]));
+      ws.addEventListener(event, trigger);
     });
+
+  ws.on = (event, callback) =>
+    ws.addEventListener(
+      event,
+      NATIVE_EVENTS.includes(event)
+        ? callback
+        : ({ detail }) => callback(detail)
+    );
+
+  ws.addEventListener("message", ({ data }) => {
+    const [detail, event] = JSON.parse(data);
+    ws.dispatchEvent(new CustomEvent(event, { detail }));
   });
 
-export default (url = "") => {
-  if (!ws) {
-    ws = new WebSocket(url);
-
-    ws.asyncEmit = (name, payload, timeout = 3000) =>
-      asyncEmit(name, payload, timeout, ws);
-  }
   return ws;
 };
+
+const ws = initWebsocket("ws://localhost:1337");
+
+// export default initWebsocket;

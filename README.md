@@ -4,12 +4,14 @@
 
 ## async-await-websockets
 
-A tiny socket.io server which can handle `async/await` requests.
-
-This repo also packs a `async-await-websockets/client.js` which:
-
-- initiates a socket.io connection
-- adds the `socket.asyncEmit` functionality to your socket instance
+- ✅ Uses native `websockets`
+  - CLIENT (https://developer.mozilla.org/en-US/docs/Web/API/WebSockets_API/Writing_WebSocket_client_applications)
+  - SERVER (https://github.com/websockets/ws)
+- ✅ Enables `async/await` messaging from the client
+- ❌ Broadcast messages
+- ❌ Procedural chat rooms
+- ❌ Client authentication
+- ❌ Automatic reconnection
 
 ## How to create your own server
 
@@ -34,26 +36,26 @@ import aaw from "async-await-websockets";
 aaw("events");
 ```
 
-7. Add directory `events`
+7. `mkdir events`
 8. `npm run dev`
 
 Your server should now be reachable on ws://localhost:1337
 
 ## Configuration
 
-`aaw(root, hooks, port, config, server, log)`
+`aaw(eventDir, services, port, server, log)`
 
-### root (string)
+### eventDir (string)
 
 Name of directory that holds your socket events.
 
 Default: `events`
 
-### hooks (object)
+### services (object)
 
-Additional instances that you need access to in your socket events (MongoDB for example).
+Third party services that you need access to in your socket events (e.g. database connection). `ws` is always exposed and cannot be removed.
 
-Default: `{}`
+Default: `{ ws: [Websocket Object] }`
 
 ### port (integer)
 
@@ -61,89 +63,71 @@ A port of your liking.
 
 Default: `1337`
 
-### config (object)
-
-Server configuration (https://socket.io/docs/v3/server-api/index.html) of your liking.
-
-Default:
-
-```
-{
-  cors: {
-    origin: "*",
-  },
-}
-```
-
-(note: cors is required since socket.io version 4.0.0 and should never be the default \* in production)
-
 ### server (nodejs server instance)
 
-If you want the socket server to attach to another server (for example a http-one) you can pass the node server here.
+If you want to attach to a custom server pass it in here.
 
 Default: `undefined`
 
 ### log (function)
 
-With the parameter signature `(event, socketID, async, error, body, response)` you can create custom server logging for all events called through `root`-directory.
+With the parameter signature `(event, websocketKey, async, error, body, response)` you can create custom server logging for all events called through `root`-directory.
 
 Default: `undefined`
 
 ## Your server
 
-`aaw` returns an `io`-instance which you can create custom socket.io functionality on.
+`aaw` returns an `ws`-instance (https://github.com/websockets/ws)
 
-`events` should contain `.js`-files. These files are scanned and will be callable with `socket.asyncEmit('fileName')`.
+Each `.js` file in `events` is scanned and available with `ws.sendAsync('dir/file')`
 
-This is the signature for any `.js` file within `events`.
+This is the signature for any `.js` file within `events`:
 
 ```
-export default async (body, _socket, _io, hooks) => {
-  const response = await hooks.mongo.insertSomething(body.id);
+export default async (body, services) => {
+  const response = await services.mongo.insertSomething(body.id);
+  services.ws.sendEvent('notify-about-insertion', { id: response.id });
   return response;
 }
 ```
 
-Omitting the `async` keyword will treat the event as a regular socket.io emit event.
+Omitting the `async` keyword will treat the event as a regular websocket event.
 
 ## Your client
 
 `npm install async-await-websockets`
 
 ```
-import io from 'async-await-websockets';
+import aaw from 'async-await-websockets';
 
-(async () => {
-  try {
-    const socket = await io.default("ws://localhost:1337");
-    const result = await socket.asyncEmit("example-async", { somedata: "for the backend" });
-    console.log(result);
-  } catch ({ error }) {
-    console.error(error);
-  }
-})();
+const ws = aaw('wss://websocket-server.url:1337');
+
+ws.on('open', () => {
+  (async () => {
+    try {
+      const result = await ws.sendAsync('example-async', { somedata: "for the backend" });
+      console.info(result);
+    } catch ({ error }) {
+      console.error(error);
+    }
+  })();
+});
 ```
 
-- First `await` is to initialize the socket connection. `io.default` parameters:
+### `ws.sendAsync` parameters:
 
-  - `url` (string, default `''`)
-
-- Second `await` is to retrieve information from the server. `socket.asyncEmit` parameters:
-
-  - `name` (string, required!)
-  - `payload` (any, default `undefined`)
-  - `timeout` (integer, default `3000`)
-
-In the above example we're doing these next to one another. You can split them up and define `socket` globally for your project.
+- `event name` (string, required)
+- `payload` (any, default `undefined`)
+- `timeout in ms` (integer, default `3000`)
 
 ## Error handling
 
-When calling `socket.asyncEmit('someEvent')` there are two possible failures:
+When calling `ws.sendAsync('some-event')` there are two possible failures:
 
 1. The call to your socket server timed out (happens on the client).
 2. The server threw an error because something went wrong.
 
-In both cases `asyncEmit` will throw an object that contains an error-message like so:
+In both cases `sendAsync` will throw an object that contains an error-message like so:
 
 ```
 {

@@ -1,10 +1,12 @@
-export default (body, _socket, io, hooks) => {
-  const data = {
-    dataFrom: "events/example-sync.js",
+export default (body, services) => {
+  const {
+    ws: { sendEvent },
+  } = services;
+
+  sendEvent("example-sync-response", {
+    event: process.cwd(),
     delivered: "non-deterministically",
     body,
-    hooks,
-  };
-  io.emit("example-sync-response", data);
-  return data;
+    services: Object.keys(services),
+  });
 };
