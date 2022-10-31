@@ -9,9 +9,9 @@
   - SERVER (https://github.com/websockets/ws)
 - ✅ Enables `async/await` messaging from the client
 - ✅ Broadcast messages
+- ✅ Automatic reconnection
 - ❌ Procedural chat rooms
 - ❌ Client authentication
-- ❌ Automatic reconnection
 
 ## How to create your own server
 
