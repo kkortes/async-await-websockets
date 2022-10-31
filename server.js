@@ -50,6 +50,10 @@ export default async (
     port,
   });
 
+  // setInterval(() => {
+  //   console.info([...wss.clients].map(({ id }) => id));
+  // }, 750);
+
   wss.broadcast = (body, ws = undefined) =>
     wss.clients.forEach(
       (client) =>
@@ -60,6 +64,7 @@ export default async (
     "connection",
     (ws, { headers: { "sec-websocket-key": websocketKey } }) => {
       ws.id = websocketKey;
+      ws.send(JSON.stringify(["id", websocketKey]));
       // TODO: add client auth (to prevent anyone from connecting)
 
       ws.sendEvent = (event, data) => ws.send(JSON.stringify([event, data]));

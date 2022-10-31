@@ -42,16 +42,14 @@ function AsyncAwaitWebsocket(url, protocols, options) {
       });
 
     this.on = (event, callback) => {
-      persistant.addEventListener(
-        event,
-        NATIVE_EVENTS.includes(event)
-          ? callback
-          : ({ detail }) => callback(detail)
-      );
+      NATIVE_EVENTS.includes(event)
+        ? ws.addEventListener(event, callback)
+        : persistant.addEventListener(event, ({ detail }) => callback(detail));
     };
 
     ws.addEventListener("message", ({ data }) => {
       const [event, detail] = JSON.parse(data);
+      event === "id" && (this.id = detail);
       persistant.dispatchEvent(new CustomEvent(event, { detail }));
     });
   };
