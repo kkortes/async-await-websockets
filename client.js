@@ -1,9 +1,9 @@
 const NATIVE_EVENTS = ["close", "error", "message", "open"];
 
-const initWebsocket = (url, protocols) => {
+export default (url, protocols) => {
   const ws = new WebSocket(url, protocols);
 
-  ws.sendSync = (event, data) => ws.send(JSON.stringify([data, event]));
+  ws.sendSync = (event, data) => ws.send(JSON.stringify([event, data]));
 
   ws.sendAsync = (event, data, timeout = 3000) =>
     new Promise((resolve, reject) => {
@@ -18,7 +18,7 @@ const initWebsocket = (url, protocols) => {
         reject({ error: "WebSocket error (client): request timed out" });
       }, timeout);
 
-      ws.send(JSON.stringify([data, event]));
+      ws.send(JSON.stringify([event, data]));
       ws.addEventListener(event, trigger);
     });
 
@@ -31,13 +31,9 @@ const initWebsocket = (url, protocols) => {
     );
 
   ws.addEventListener("message", ({ data }) => {
-    const [detail, event] = JSON.parse(data);
+    const [event, detail] = JSON.parse(data);
     ws.dispatchEvent(new CustomEvent(event, { detail }));
   });
 
   return ws;
 };
-
-// const ws = initWebsocket("ws://localhost:1337");
-
-export default initWebsocket;

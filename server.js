@@ -50,22 +50,26 @@ export default async (
     port,
   });
 
-  // TODO: enable this properly
-  wss.broadcast = (data, sender) =>
-    wss.clients.forEach((client) => client !== sender && client.send(data));
+  wss.broadcast = (body, ws = undefined) =>
+    wss.clients.forEach(
+      (client) =>
+        ws !== client && client.send(JSON.stringify(["broadcast", body]))
+    );
 
   wss.on(
     "connection",
     (ws, { headers: { "sec-websocket-key": websocketKey } }) => {
-      // TODO: make sure old connections are being removed
-      // TODO old solution had `cors.origin = *` we need it now?
+      ws.id = websocketKey;
+      // TODO: add client auth (to prevent anyone from connecting)
 
-      ws.sendEvent = (event, data) => ws.send(JSON.stringify([data, event]));
+      ws.sendEvent = (event, data) => ws.send(JSON.stringify([event, data]));
+      ws.broadcast = (body, includeSelf = false) =>
+        wss.broadcast(body, includeSelf || ws);
 
       ws.on("message", (msg) => {
-        const [body, event] = JSON.parse(msg.toString());
+        const [event, body] = JSON.parse(msg.toString());
         const func = endpoints?.[event];
-        const resolution = func && func(body, { ws, ...services });
+        const resolution = func && func(body || {}, { ws, ...services });
 
         (async () => {
           let result,
@@ -78,7 +82,7 @@ export default async (
             error = err.toString();
           }
 
-          async && ws.send(JSON.stringify([error ? { error } : result, event]));
+          async && ws.send(JSON.stringify([event, error ? { error } : result]));
 
           typeof log === "function" &&
             log(
@@ -86,7 +90,7 @@ export default async (
                 event,
                 websocketKey,
                 async,
-                body,
+                body: body || {},
                 result,
                 error,
               },

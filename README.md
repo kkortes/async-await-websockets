@@ -8,7 +8,7 @@
   - CLIENT (https://developer.mozilla.org/en-US/docs/Web/API/WebSockets_API/Writing_WebSocket_client_applications)
   - SERVER (https://github.com/websockets/ws)
 - ✅ Enables `async/await` messaging from the client
-- ❌ Broadcast messages
+- ✅ Broadcast messages
 - ❌ Procedural chat rooms
 - ❌ Client authentication
 - ❌ Automatic reconnection

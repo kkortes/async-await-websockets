@@ -12,7 +12,10 @@
       ws.on("open", info);
       ws.on("close", error);
       ws.on("error", error);
+
+      // Custom events
       ws.on("example-sync-response", info);
+      ws.on("broadcast", info);
 
       window.async = async () => {
         try {
@@ -28,11 +31,24 @@
       window.sync = sendSync.bind(undefined, "example-sync", {
         userName: "kortes",
       });
+
+      window.broadcast = sendSync.bind(undefined, "subdir/broadcast");
     </script>
+    <style>
+      .list {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        width: 200px;
+      }
+    </style>
   </head>
   <body>
     <h1>async-await-websockets client</h1>
-    <button onclick="async()">Send asyncronously</button>
-    <button onclick="sync()">Send syncronously</button>
+    <div class="list">
+      <button onclick="async()">Send asyncronously</button>
+      <button onclick="sync()">Send syncronously</button>
+      <button onclick="broadcast()">Broadcast</button>
+    </div>
   </body>
 </html>
