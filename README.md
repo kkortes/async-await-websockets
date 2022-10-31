@@ -71,7 +71,7 @@ Default: `undefined`
 
 ### log (function)
 
-With the parameter signature `(event, websocketKey, async, error, body, response)` you can create custom server logging for all events called through `root`-directory.
+With the parameter signature `(event, websocketKey, async, error, body, result)` you can create custom server logging for all events called through `root`-directory.
 
 Default: `undefined`
 

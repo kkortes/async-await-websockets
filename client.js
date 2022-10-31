@@ -38,6 +38,6 @@ const initWebsocket = (url, protocols) => {
   return ws;
 };
 
-const ws = initWebsocket("ws://localhost:1337");
+// const ws = initWebsocket("ws://localhost:1337");
 
-// export default initWebsocket;
+export default initWebsocket;

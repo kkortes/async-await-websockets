@@ -68,18 +68,17 @@ export default async (
         const resolution = func && func(body, { ws, ...services });
 
         (async () => {
-          let response,
+          let result,
             error,
             async = func.constructor.name === "AsyncFunction";
 
           try {
-            response = async ? await resolution : resolution;
+            result = async ? await resolution : resolution;
           } catch (err) {
             error = err.toString();
           }
 
-          async &&
-            ws.send(JSON.stringify([error ? { error } : response, event]));
+          async && ws.send(JSON.stringify([error ? { error } : result, event]));
 
           typeof log === "function" &&
             log(
@@ -88,7 +87,7 @@ export default async (
                 websocketKey,
                 async,
                 body,
-                response,
+                result,
                 error,
               },
               console[error ? "error" : "debug"]
