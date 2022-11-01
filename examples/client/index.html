@@ -10,9 +10,9 @@
       const { sendSync, sendAsync } = ws;
       const { info, error } = console;
 
-      ws.on("open", info);
-      ws.on("close", error);
-      ws.on("error", error);
+      ws.on("open", () => console.info("connected"));
+      ws.on("close", () => console.info("disconnected, retrying.."));
+      // ws.on("error", console.error);
 
       // Custom events
       ws.on("example-sync-response", info);

@@ -60,51 +60,50 @@ export default async (
         ws !== client && client.send(JSON.stringify(["broadcast", body]))
     );
 
-  wss.on(
-    "connection",
-    (ws, { headers: { "sec-websocket-key": websocketKey } }) => {
-      ws.id = websocketKey;
-      ws.send(JSON.stringify(["id", websocketKey]));
-      // TODO: add client auth (to prevent anyone from connecting)
+  wss.on("connection", (ws, { headers }) => {
+    // Hack sec-websocket-protocol to use as identifier
+    const { "sec-websocket-protocol": websocketKey } = headers;
+    ws.sid = websocketKey;
 
-      ws.sendEvent = (event, data) => ws.send(JSON.stringify([event, data]));
-      ws.broadcast = (body, includeSelf = false) =>
-        wss.broadcast(body, includeSelf || ws);
+    // TODO: add client auth (to prevent anyone from connecting)
 
-      ws.on("message", (msg) => {
-        const [event, body] = JSON.parse(msg.toString());
-        const func = endpoints?.[event];
-        const resolution = func && func(body || {}, { ws, ...services });
+    ws.sendEvent = (event, data) => ws.send(JSON.stringify([event, data]));
+    ws.broadcast = (body, includeSelf = false) =>
+      wss.broadcast(body, includeSelf || ws);
 
-        (async () => {
-          let result,
-            error,
-            async = func.constructor.name === "AsyncFunction";
+    ws.on("message", (msg) => {
+      const [event, body] = JSON.parse(msg.toString());
+      const func = endpoints?.[event];
+      const resolution = func && func(body || {}, { ws, ...services });
 
-          try {
-            result = async ? await resolution : resolution;
-          } catch (err) {
-            error = err.toString();
-          }
+      (async () => {
+        let result,
+          error,
+          async = func.constructor.name === "AsyncFunction";
 
-          async && ws.send(JSON.stringify([event, error ? { error } : result]));
+        try {
+          result = async ? await resolution : resolution;
+        } catch (err) {
+          error = err.toString();
+        }
 
-          typeof log === "function" &&
-            log(
-              {
-                event,
-                websocketKey,
-                async,
-                body: body || {},
-                result,
-                error,
-              },
-              console[error ? "error" : "debug"]
-            );
-        })();
-      });
-    }
-  );
+        async && ws.send(JSON.stringify([event, error ? { error } : result]));
+
+        typeof log === "function" &&
+          log(
+            {
+              event,
+              websocketKey,
+              async,
+              body: body || {},
+              result,
+              error,
+            },
+            console[error ? "error" : "debug"]
+          );
+      })();
+    });
+  });
 
   console.info(`Server started on port ${port}`);
   return wss;

@@ -3,4 +3,5 @@ export default async (body, services) => ({
   delivered: "deterministically",
   body,
   services: Object.keys(services),
+  sid: services.ws.sid,
 });

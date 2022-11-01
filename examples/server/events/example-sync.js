@@ -8,5 +8,6 @@ export default (body, services) => {
     delivered: "non-deterministically",
     body,
     services: Object.keys(services),
+    sid: services.ws.sid,
   });
 };
