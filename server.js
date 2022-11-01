@@ -50,10 +50,6 @@ export default async (
     port,
   });
 
-  // setInterval(() => {
-  //   console.info([...wss.clients].map(({ id }) => id));
-  // }, 750);
-
   wss.broadcast = (body, ws = undefined) =>
     wss.clients.forEach(
       (client) =>
@@ -61,11 +57,8 @@ export default async (
     );
 
   wss.on("connection", (ws, { headers }) => {
-    // Hack sec-websocket-protocol to use as identifier
-    const { "sec-websocket-protocol": websocketKey } = headers;
+    const { "sec-websocket-protocol": websocketKey } = headers; // A hack: use sec-websocket-protocol as the socket id
     ws.sid = websocketKey;
-
-    // TODO: add client auth (to prevent anyone from connecting)
 
     ws.sendEvent = (event, data) => ws.send(JSON.stringify([event, data]));
     ws.broadcast = (body, includeSelf = false) =>
