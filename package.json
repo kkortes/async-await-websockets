@@ -1,13 +1,10 @@
 {
   "name": "async-await-websockets",
-  "version": "2.0.1",
+  "version": "3.0.0",
   "description": "A async/await solution to websockets",
   "main": "server.js",
   "module": "client.js",
   "type": "module",
   "author": "Kkortes",
-  "license": "ISC",
-  "dependencies": {
-    "ws": "^8.10.0"
-  }
+  "license": "ISC"
 }

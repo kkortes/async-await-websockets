@@ -2,6 +2,10 @@
 
 ![](https://wallpaperaccess.com/full/374183.jpg)
 
+## Major update since v3.0.0+
+
+Async-await-websockets is now running on Bun (https://bun.sh/). Until the most popular runtime hosts have support for Bun you'll have to run it on your own custom server _or_ in a docker container.
+
 ## async-await-websockets
 
 - ✅ Uses native `websockets`
@@ -17,17 +21,16 @@
 
 1. `mkdir my-server`
 2. `cd my-server`
-3. `npm init`
+3. `bun init`
 4. Add to package.json
 
 ```
-"type": "module",
 "scripts": {
-  "dev": "node index.js"
+  "dev": "bun --watch index.js"
 },
 ```
 
-5. `npm install async-await-websockets`
+5. `bun install async-await-websockets`
 6. Create `index.js` with contents:
 
 ```
@@ -37,13 +40,13 @@ aaw("events");
 ```
 
 7. `mkdir events`
-8. `npm run dev`
+8. `bun dev`
 
 Your server should now be reachable on ws://localhost:1337
 
 ## Configuration
 
-`aaw(eventDir, services, port, server, log)`
+`aaw(eventDir, services, port, log)`
 
 ### eventDir (string)
 
@@ -63,12 +66,6 @@ A port of your liking.
 
 Default: `1337`
 
-### server (nodejs server instance)
-
-If you want to attach to a custom server pass it in here.
-
-Default: `undefined`
-
 ### log (function)
 
 With the parameter signature `(event, websocketKey, async, error, body, result)` you can create custom server logging for all events called through `root`-directory.
@@ -77,7 +74,7 @@ Default: `undefined`
 
 ## Your server
 
-`aaw` returns an `ws`-instance (https://github.com/websockets/ws)
+`aaw` returns an `Bun websocket`-instance (https://bun.sh/docs/api/websockets)
 
 Each `.js` file in `events` is scanned and available with `ws.sendAsync('dir/file')`
 

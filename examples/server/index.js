@@ -1,6 +1,4 @@
 import aaw from "async-await-websockets";
-import dotenv from "dotenv";
-dotenv.config();
 
 const { PORT } = process.env;
 
@@ -20,5 +18,5 @@ aaw(
     if (error) toLog.push(error);
 
     log(toLog.join(" | "));
-  }
+  },
 );

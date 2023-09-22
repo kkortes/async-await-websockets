@@ -1,7 +1,8 @@
 import fs from "node:fs";
 import { normalize } from "node:path";
 import { pathToFileURL } from "node:url";
-import { WebSocketServer } from "ws";
+
+const { serve } = Bun;
 
 const serveEndpoints = async (root, path) => {
   const endpoints = fetchEndpoints(root, path);
@@ -38,66 +39,82 @@ export default async (
   eventDir = "events",
   services = {},
   port = 1337,
-  server = undefined,
-  log = undefined
+  log = undefined,
 ) => {
   if (!eventDir) throw new Error("`eventDir` must be set");
 
   const endpoints = await serveEndpoints(eventDir, "");
 
-  const wss = new WebSocketServer({
-    ...(server && { server }),
-    port,
-  });
+  const clientPool = {};
 
-  wss.broadcast = (body, ws = undefined) =>
-    wss.clients.forEach(
+  const broadcast = (body, ws = undefined) =>
+    Object.values(clientPool).forEach(
       (client) =>
-        ws !== client && client.send(JSON.stringify(["broadcast", body]))
+        ws !== client && client.send(JSON.stringify(["broadcast", body])),
     );
 
-  wss.on("connection", (ws, { headers }) => {
-    const { "sec-websocket-protocol": websocketKey } = headers; // A hack: use sec-websocket-protocol as the socket id
-    ws.sid = websocketKey;
+  serve({
+    port,
+    fetch: (req, server) => {
+      // A hack: use sec-websocket-protocol as the socket id (named `data` in Bun)
+      if (
+        server.upgrade(req, { data: req.headers.get("sec-websocket-protocol") })
+      )
+        return;
 
-    ws.sendEvent = (event, data) => ws.send(JSON.stringify([event, data]));
-    ws.broadcast = (body, includeSelf = false) =>
-      wss.broadcast(body, includeSelf || ws);
+      return new Response("Couldn't upgrade the websocket, handshake failed", {
+        status: 500,
+      });
+    },
+    websocket: {
+      message: (ws, msg) => {
+        const [event, body] = JSON.parse(msg.toString());
+        const func = endpoints?.[event];
 
-    ws.on("message", (msg) => {
-      const [event, body] = JSON.parse(msg.toString());
-      const func = endpoints?.[event];
-      const resolution = func && func(body || {}, { ws, ...services });
+        const resolution = func && func(body || {}, { ws, ...services });
 
-      (async () => {
-        let result,
-          error,
-          async = func.constructor.name === "AsyncFunction";
+        (async () => {
+          const res = await resolution;
 
-        try {
-          result = async ? await resolution : resolution;
-        } catch (err) {
-          error = err.toString();
-        }
+          let result,
+            error,
+            async = func.constructor.name === "AsyncFunction";
 
-        async && ws.send(JSON.stringify([event, error ? { error } : result]));
+          try {
+            result = async ? await resolution : resolution;
+          } catch (err) {
+            error = err.toString();
+          }
 
-        typeof log === "function" &&
-          log(
-            {
-              event,
-              websocketKey,
-              async,
-              body: body || {},
-              result,
-              error,
-            },
-            console[error ? "error" : "debug"]
-          );
-      })();
-    });
+          async && ws.send(JSON.stringify([event, error ? { error } : result]));
+
+          typeof log === "function" &&
+            log(
+              {
+                event,
+                websocketKey: ws.data,
+                async,
+                body: body || {},
+                result,
+                error,
+              },
+              console[error ? "error" : "debug"],
+            );
+        })();
+      },
+      open: (ws) => {
+        clientPool[ws.data] = ws;
+
+        ws.sendEvent = (event, data) => ws.send(JSON.stringify([event, data]));
+        ws.broadcast = (body, includeSelf = false) =>
+          broadcast(body, includeSelf || ws);
+      },
+      close: (ws, code, message) => {
+        delete clientPool[ws.data];
+      },
+      drain: (ws) => {},
+    },
   });
 
   console.info(`Server started on port ${port}`);
-  return wss;
 };
