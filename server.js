@@ -74,7 +74,9 @@ export default async (
         const resolution = func && func(body || {}, { ws, ...services });
 
         (async () => {
-          const res = await resolution;
+          try {
+            const res = await resolution;
+          } catch (_) {}
 
           let result,
             error,

@@ -1,6 +1,6 @@
 {
   "name": "async-await-websockets",
-  "version": "3.0.0",
+  "version": "3.0.2",
   "description": "A async/await solution to websockets",
   "main": "server.js",
   "module": "client.js",
