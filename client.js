@@ -1,6 +1,4 @@
-let ws,
-  reconnector,
-  eventTarget = document.createElement("div");
+let ws, reconnector, eventTarget;
 
 const generateID = () =>
   `_${
@@ -10,6 +8,7 @@ const generateID = () =>
   }`;
 
 const AsyncAwaitWebsocket = (url, options) => {
+  eventTarget = document.createElement("div");
   const { reconnectInterval } = options || { reconnectInterval: 1000 };
 
   ws = new WebSocket(url, generateID());
@@ -48,13 +47,13 @@ const AsyncAwaitWebsocket = (url, options) => {
   ws.addEventListener("close", (detail) => {
     reconnector = setTimeout(
       AsyncAwaitWebsocket.bind(undefined, url, options),
-      reconnectInterval
+      reconnectInterval,
     );
     eventTarget.dispatchEvent(new CustomEvent("close", { detail }));
   });
 
   ws.addEventListener("error", (detail) =>
-    eventTarget.dispatchEvent(new CustomEvent("error", { detail }))
+    eventTarget.dispatchEvent(new CustomEvent("error", { detail })),
   );
 
   ws.addEventListener("message", ({ data }) => {
