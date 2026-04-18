@@ -8,7 +8,9 @@ const generateID = () =>
   }`;
 
 const AsyncAwaitWebsocket = (url, options) => {
-  eventTarget = document.createElement("div");
+  // Create once; reuse across internal reconnects so listeners registered via
+  // ws.on survive. Lazy so import stays safe in non-browser environments.
+  eventTarget = eventTarget || document.createElement("div");
   const { reconnectInterval } = options || { reconnectInterval: 1000 };
 
   ws = new WebSocket(url, generateID());
