@@ -71,7 +71,14 @@ export default async (
         const [event, body] = JSON.parse(msg.toString());
         const func = endpoints?.[event];
 
-        const resolution = func && func(body || {}, { ws, ...services });
+        if (!func) {
+          const error = `Unknown event: ${event}`;
+          console.error(error, "— registered:", Object.keys(endpoints));
+          ws.send(JSON.stringify([event, { error }]));
+          return;
+        }
+
+        const resolution = func(body || {}, { ws, ...services });
 
         (async () => {
           try {
