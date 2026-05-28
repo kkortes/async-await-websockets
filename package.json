@@ -1,11 +1,20 @@
 {
-  "name": "async-await-websockets",
+  "name": "@ape-egg/async-await-websockets",
   "version": "3.0.7",
   "description": "A async/await solution to websockets",
   "main": "server.js",
   "types": "index.d.ts",
   "module": "client.js",
   "type": "module",
+  "files": [
+    "server.js",
+    "client.js",
+    "index.d.ts",
+    "README.md"
+  ],
   "author": "Kkortes",
-  "license": "ISC"
+  "license": "ISC",
+  "publishConfig": {
+    "access": "public"
+  }
 }
