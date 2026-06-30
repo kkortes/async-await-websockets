@@ -7,8 +7,8 @@
   "module": "client.js",
   "type": "module",
   "scripts": {
-    "release:check": "npm pack --dry-run",
-    "release": "bun release:check && ./scripts/publish.sh"
+    "publish:check": "npm pack --dry-run",
+    "publish": "bun publish:check && ./scripts/publish.sh"
   },
   "files": [
     "server.js",
