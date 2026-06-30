@@ -131,3 +131,10 @@ In both cases `sendAsync` will throw an object that contains an error-message li
   error: "What went wrong"
 }
 ```
+
+## Publishing
+
+- `bun release:check` — dry-run `npm pack` to preview the published tarball.
+- `bun release` — runs the check, prompts for a new version (or keeps the current one), and publishes `@ape-egg/async-await-websockets` to npm.
+
+Requires being logged in to npm (`npm login`).
