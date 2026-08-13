@@ -4,6 +4,11 @@ import { pathToFileURL } from "node:url";
 
 const { serve } = Bun;
 
+// Replies echo the request id when the client sent one, so concurrent requests
+// for the same event stay apart. Id-less requests get the plain tuple.
+const reply = (ws, event, data, id) =>
+  ws.send(JSON.stringify(id ? [event, data, id] : [event, data]));
+
 const serveEndpoints = async (root, path) => {
   const endpoints = fetchEndpoints(root, path);
   const results = await Promise.all(Object.values(endpoints));
@@ -99,13 +104,13 @@ export default async (
     },
     websocket: {
       message: (ws, msg) => {
-        const [event, body] = JSON.parse(msg.toString());
+        const [event, body, id] = JSON.parse(msg.toString());
         const func = endpoints?.[event];
 
         if (!func) {
           const error = `Unknown event: ${event}`;
           console.error(error, "— registered:", Object.keys(endpoints));
-          ws.send(JSON.stringify([event, { error }]));
+          reply(ws, event, { error }, id);
           return;
         }
 
@@ -133,7 +138,7 @@ export default async (
             error = err.toString();
           }
 
-          async && ws.send(JSON.stringify([event, error ? { error } : result]));
+          async && reply(ws, event, error ? { error } : result, id);
 
           typeof log === "function" &&
             log(

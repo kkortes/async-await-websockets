@@ -1,5 +1,9 @@
 let ws, reconnector, eventTarget;
 
+// In-flight sendAsync requests, keyed by the id sent on the wire. Replies are
+// correlated by id, never by event name.
+const pending = new Map();
+
 const generateID = () =>
   `_${
     Number(String(Math.random()).slice(2)) +
@@ -20,19 +24,15 @@ const AsyncAwaitWebsocket = (url, options) => {
 
   ws.sendAsync = (event, data, timeout = 3000) =>
     new Promise((resolve, reject) => {
-      const trigger = ({ detail }) => {
-        clearTimeout(id);
-        eventTarget.removeEventListener(event, trigger);
-        detail?.error ? reject(detail) : resolve(detail);
-      };
+      const id = generateID();
 
-      const id = setTimeout(() => {
-        eventTarget.removeEventListener(event, trigger);
+      const timer = setTimeout(() => {
+        pending.delete(id);
         reject({ error: "WebSocket error (client): request timed out" });
       }, timeout);
 
-      ws.send(JSON.stringify([event, data]));
-      eventTarget.addEventListener(event, trigger);
+      pending.set(id, { resolve, reject, timer });
+      ws.send(JSON.stringify([event, data, id]));
     });
 
   ws.on = (event, callback) => {
@@ -59,8 +59,19 @@ const AsyncAwaitWebsocket = (url, options) => {
   );
 
   ws.addEventListener("message", ({ data }) => {
-    const [event, detail] = JSON.parse(data);
-    eventTarget.dispatchEvent(new CustomEvent(event, { detail }));
+    const [event, detail, id] = JSON.parse(data);
+    const request = id && pending.get(id);
+
+    if (request) {
+      clearTimeout(request.timer);
+      pending.delete(id);
+      detail?.error ? request.reject(detail) : request.resolve(detail);
+      return;
+    }
+
+    // Id-less frames are server pushes and go to ws.on subscribers; an id we no
+    // longer track is a reply that lost the race against its timeout.
+    if (!id) eventTarget.dispatchEvent(new CustomEvent(event, { detail }));
   });
 
   return ws;

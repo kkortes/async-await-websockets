@@ -137,6 +137,18 @@ ws.on('open', () => {
 - `payload` (any, default `undefined`)
 - `timeout in ms` (integer, default `3000`)
 
+Every `sendAsync` call gets its own request id and resolves only on the reply carrying that id. Concurrent calls to the same event therefore each receive their own result, and a server push (`ws.sendEvent` / `room.emit`) that happens to share the event name never resolves a pending request — it goes to `ws.on` subscribers, where it belongs. A reply that arrives after the timeout has already rejected is dropped.
+
+## Wire protocol
+
+Messages are JSON tuples.
+
+- Request: `[event, payload]`, or `[event, payload, id]` when the client wants a correlated reply (this is what `sendAsync` sends; `sendSync` sends the two-element form).
+- Reply: the server echoes the id it was given — `[event, result, id]`. A request without an id is answered with `[event, result]`, exactly as before.
+- Push: `[event, data]` — server-initiated messages never carry an id, so the client always routes them to `ws.on`.
+
+Ids are opaque strings; a client that never sends one keeps the original behavior, so old clients and new servers interoperate in both directions.
+
 ## Error handling
 
 When calling `ws.sendAsync('some-event')` there are two possible failures:
