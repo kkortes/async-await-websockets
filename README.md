@@ -30,11 +30,11 @@ Async-await-websockets is now running on Bun (https://bun.sh/). Until the most p
 },
 ```
 
-5. `bun install async-await-websockets`
+5. `bun install @ape-egg/async-await-websockets`
 6. Create `index.js` with contents:
 
 ```
-import aaw from "async-await-websockets";
+import aaw from "@ape-egg/async-await-websockets";
 
 aaw("events");
 ```
@@ -68,7 +68,7 @@ Default: `1337`
 
 ### log (function)
 
-With the parameter signature `(event, websocketKey, async, error, body, result)` you can create custom server logging for all events called through `root`-directory.
+Called after every event with `({ event, websocketKey, async, body, result, error }, print)`, where `print` is `console.debug` (or `console.error` when the event threw). With it you can create custom server logging for all events called through `root`-directory. See `examples/server/index.js`.
 
 Default: `undefined`
 
@@ -112,10 +112,10 @@ export default (body, { ws, room }) => {
 
 ## Your client
 
-`npm install async-await-websockets`
+`npm install @ape-egg/async-await-websockets`
 
 ```
-import aaw from 'async-await-websockets';
+import aaw from '@ape-egg/async-await-websockets';
 
 const ws = aaw('wss://websocket-server.url:1337');
 

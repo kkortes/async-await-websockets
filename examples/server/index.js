@@ -1,4 +1,4 @@
-import aaw from "async-await-websockets";
+import aaw from "@ape-egg/async-await-websockets";
 
 const { PORT } = process.env;
 
@@ -6,17 +6,14 @@ aaw(
   "events",
   { thirdPartyService: "example" },
   PORT,
-  undefined,
-  ({ event, websocketKey, _async, error, body, _result }, log) => {
-    const { version } = body;
-    const toLog = [];
-
-    toLog.push(`${error ? "🔴" : "🟢"} ${event}`);
-    toLog.push(version || "n/a");
-    toLog.push(websocketKey);
-
-    if (error) toLog.push(error);
-
-    log(toLog.join(" | "));
-  },
+  ({ event, websocketKey, async, body, result, error }, print) =>
+    print(
+      [
+        `${error ? "🔴" : "🟢"} ${event}`,
+        async ? "async" : "sync",
+        websocketKey,
+        JSON.stringify(body),
+        error || JSON.stringify(result) || "no result",
+      ].join(" | "),
+    ),
 );
