@@ -99,7 +99,21 @@ export default async (
     },
     websocket: {
       message: (ws, msg) => {
-        const [event, body] = JSON.parse(msg.toString());
+        let event, body;
+
+        // The trust boundary: everything past this point is client input
+        try {
+          const frame = JSON.parse(msg.toString());
+          if (!Array.isArray(frame))
+            throw new Error("expected an [event, data] tuple");
+          [event, body] = frame;
+        } catch (err) {
+          const error = `Malformed message: ${err.message}`;
+          console.error(error, "— received:", msg.toString());
+          ws.send(JSON.stringify(["error", { error }]));
+          return;
+        }
+
         const func = endpoints?.[event];
 
         if (!func) {
@@ -116,24 +130,19 @@ export default async (
           size: (name) => rooms[name]?.size || 0,
         };
 
-        const resolution = func(body || {}, { ws, room, ...services });
-
         (async () => {
-          try {
-            const res = await resolution;
-          } catch (_) {}
-
           let result,
             error,
             async = func.constructor.name === "AsyncFunction";
 
           try {
-            result = async ? await resolution : resolution;
+            result = await func(body || {}, { ws, room, ...services });
           } catch (err) {
             error = err.toString();
           }
 
-          async && ws.send(JSON.stringify([event, error ? { error } : result]));
+          (async || error) &&
+            ws.send(JSON.stringify([event, error ? { error } : result]));
 
           typeof log === "function" &&
             log(
