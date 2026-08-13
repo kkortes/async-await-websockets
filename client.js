@@ -11,7 +11,7 @@ const AsyncAwaitWebsocket = (url, options) => {
   // Create once; reuse across internal reconnects so listeners registered via
   // ws.on survive.
   eventTarget = eventTarget || new EventTarget();
-  const { reconnectInterval } = options || { reconnectInterval: 1000 };
+  const { reconnectInterval = 1000 } = options || {};
 
   ws = new WebSocket(url, generateID());
   ws.sid = ws.protocol;
