@@ -94,6 +94,8 @@ Omitting the `async` keyword will treat the event as a regular websocket event.
 
 Every event handler receives a `room` API alongside `ws`. Rooms are named subsets of connections you can multicast to — useful for chat channels, game lobbies, or any group of clients that should receive the same event. Membership is per-connection and clears automatically when a client disconnects.
 
+Rooms and broadcasts are backed by [Bun's native pub/sub](https://bun.sh/docs/api/websockets#pub-sub), so each message is serialized once and fanned out by the runtime. Room names are namespaced as the topic `room:<name>` and cannot collide with the global broadcast topic.
+
 ```
 export default (body, { ws, room }) => {
   room.join(body.channel);
@@ -105,7 +107,7 @@ export default (body, { ws, room }) => {
 
 - `room.join(name)` — add the current connection to room `name` (created on demand).
 - `room.leave(name)` — remove the current connection from room `name` (room is deleted when empty).
-- `room.emit(name, event, data, except?)` — send `[event, data]` to every member of `name`, optionally skipping one connection (e.g. pass `ws` to exclude the sender). Returns the number of clients sent to.
+- `room.emit(name, event, data, except?)` — send `[event, data]` to every member of `name`, optionally skipping one connection (e.g. pass `ws` to exclude the sender). `except` may be any connection, not just the sender. Returns the number of clients sent to.
 - `room.size(name)` — number of connections currently in room `name`.
 
 `emit` is connection-agnostic, so a later callback (e.g. a timer) can multicast to a room after the triggering message has resolved.

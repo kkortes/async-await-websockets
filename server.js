@@ -45,46 +45,27 @@ export default async (
 
   const endpoints = await serveEndpoints(eventDir, "");
 
-  const clientPool = {};
+  // Rooms and broadcast ride on Bun's native pub/sub: membership lives on the
+  // socket, so it clears itself on disconnect. Room topics are namespaced to
+  // keep a room named "broadcast" from colliding with the global topic.
+  const BROADCAST = "broadcast";
+  const topicOf = (name) => `room:${name}`;
 
-  const broadcast = (body, ws = undefined) =>
-    Object.values(clientPool).forEach(
-      (client) =>
-        ws !== client && client.send(JSON.stringify(["broadcast", body])),
-    );
+  // `except` publishes from that socket, which excludes exactly it — works for
+  // the sender, any other connection, and even one that already disconnected.
+  const publish = (topic, payload, except = undefined) =>
+    except ? except.publish(topic, payload) : server.publish(topic, payload);
 
-  // Rooms: targeted multicast to a named subset of connections. Membership is
-  // per-connection (a Set of ws), so it clears automatically on disconnect.
-  // Handlers receive a `room` API in their context; emit is ws-agnostic so a
-  // later callback (e.g. a timer) can multicast after the triggering message.
-  const rooms = {};
-
-  const joinRoom = (ws, name) => (rooms[name] ??= new Set()).add(ws);
-
-  const leaveRoom = (ws, name) => {
-    const members = rooms[name];
-    if (!members) return;
-    members.delete(ws);
-    if (!members.size) delete rooms[name];
-  };
-
-  const leaveAllRooms = (ws) => {
-    for (const name of Object.keys(rooms)) leaveRoom(ws, name);
-  };
+  const broadcast = (body, except = undefined) =>
+    publish(BROADCAST, JSON.stringify([BROADCAST, body]), except);
 
   const emitToRoom = (name, event, data, except = undefined) => {
-    const members = rooms[name];
-    if (!members) return 0;
-    let sent = 0;
-    for (const client of members)
-      if (client !== except) {
-        client.send(JSON.stringify([event, data]));
-        sent += 1;
-      }
-    return sent;
+    const topic = topicOf(name);
+    publish(topic, JSON.stringify([event, data]), except);
+    return server.subscriberCount(topic) - (except?.isSubscribed(topic) ? 1 : 0);
   };
 
-  serve({
+  const server = serve({
     port,
     fetch: (req, server) => {
       // A hack: use sec-websocket-protocol as the socket id (named `data` in Bun)
@@ -110,10 +91,10 @@ export default async (
         }
 
         const room = {
-          join: (name) => joinRoom(ws, name),
-          leave: (name) => leaveRoom(ws, name),
+          join: (name) => ws.subscribe(topicOf(name)),
+          leave: (name) => ws.unsubscribe(topicOf(name)),
           emit: emitToRoom,
-          size: (name) => rooms[name]?.size || 0,
+          size: (name) => server.subscriberCount(topicOf(name)),
         };
 
         const resolution = func(body || {}, { ws, room, ...services });
@@ -150,15 +131,11 @@ export default async (
         })();
       },
       open: (ws) => {
-        clientPool[ws.data] = ws;
+        ws.subscribe(BROADCAST);
 
         ws.sendEvent = (event, data) => ws.send(JSON.stringify([event, data]));
         ws.broadcast = (body, includeSelf = false) =>
-          broadcast(body, includeSelf || ws);
-      },
-      close: (ws, code, message) => {
-        delete clientPool[ws.data];
-        leaveAllRooms(ws);
+          broadcast(body, includeSelf ? undefined : ws);
       },
       drain: (ws) => {},
     },
