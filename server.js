@@ -117,30 +117,28 @@ export default async (
         };
 
         const resolution = func(body || {}, { ws, room, ...services });
+        // A thenable result means the handler is async and the caller awaits a
+        // reply — regardless of how the handler was declared or wrapped.
+        const isAsync = typeof resolution?.then === "function";
 
         (async () => {
-          try {
-            const res = await resolution;
-          } catch (_) {}
-
-          let result,
-            error,
-            async = func.constructor.name === "AsyncFunction";
+          let result, error;
 
           try {
-            result = async ? await resolution : resolution;
+            result = await resolution;
           } catch (err) {
             error = err.toString();
           }
 
-          async && ws.send(JSON.stringify([event, error ? { error } : result]));
+          isAsync &&
+            ws.send(JSON.stringify([event, error ? { error } : result]));
 
           typeof log === "function" &&
             log(
               {
                 event,
                 websocketKey: ws.data,
-                async,
+                async: isAsync,
                 body: body || {},
                 result,
                 error,
