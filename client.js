@@ -28,7 +28,9 @@ const AsyncAwaitWebsocket = (url, options) => {
 
       const id = setTimeout(() => {
         eventTarget.removeEventListener(event, trigger);
-        reject({ error: "WebSocket error (client): request timed out" });
+        reject({
+          error: `WebSocket error (client): request timed out: ${event}`,
+        });
       }, timeout);
 
       ws.send(JSON.stringify([event, data]));

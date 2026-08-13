@@ -137,6 +137,18 @@ ws.on('open', () => {
 - `payload` (any, default `undefined`)
 - `timeout in ms` (integer, default `3000`)
 
+### Timeouts
+
+The default timeout is `3000` ms, which only fits fast request/response events. Anything slower — image generation, LLM calls, report builds, large uploads — needs an explicit timeout:
+
+```
+const image = await ws.sendAsync('imagegen/generate', { prompt }, 30_000);
+```
+
+When the timeout fires, `sendAsync` removes its reply listener and rejects with `{ error: "WebSocket error (client): request timed out: imagegen/generate" }`. The server is not cancelled — it keeps running the handler, and its reply arrives to no listener and is dropped. For a handler that costs money or writes to a database, the work still happened; you just never see the result.
+
+Size the timeout from the slowest expected handler, not the average one.
+
 ## Error handling
 
 When calling `ws.sendAsync('some-event')` there are two possible failures:
