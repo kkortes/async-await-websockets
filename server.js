@@ -45,10 +45,12 @@ export default async (
 
   const endpoints = await serveEndpoints(eventDir, "");
 
-  const clientPool = {};
+  // Keyed by socket identity like rooms — ws.data is a client-supplied header
+  // and collides across connections.
+  const clientPool = new Set();
 
   const broadcast = (body, ws = undefined) =>
-    Object.values(clientPool).forEach(
+    clientPool.forEach(
       (client) =>
         ws !== client && client.send(JSON.stringify(["broadcast", body])),
     );
@@ -150,14 +152,14 @@ export default async (
         })();
       },
       open: (ws) => {
-        clientPool[ws.data] = ws;
+        clientPool.add(ws);
 
         ws.sendEvent = (event, data) => ws.send(JSON.stringify([event, data]));
         ws.broadcast = (body, includeSelf = false) =>
           broadcast(body, includeSelf || ws);
       },
       close: (ws, code, message) => {
-        delete clientPool[ws.data];
+        clientPool.delete(ws);
         leaveAllRooms(ws);
       },
       drain: (ws) => {},
