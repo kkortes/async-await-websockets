@@ -1,5 +1,3 @@
-let ws, reconnector, eventTarget;
-
 const generateID = () =>
   `_${
     Number(String(Math.random()).slice(2)) +
@@ -8,17 +6,39 @@ const generateID = () =>
   }`;
 
 const AsyncAwaitWebsocket = (url, options) => {
-  // Create once; reuse across internal reconnects so listeners registered via
-  // ws.on survive.
-  eventTarget = eventTarget || new EventTarget();
-  const { reconnectInterval } = options || { reconnectInterval: 1000 };
+  const { reconnectInterval = 1000 } = options || {};
+  // One bus per instance; it outlives the sockets so listeners registered via
+  // `on` survive internal reconnects.
+  const eventTarget = new EventTarget();
+  const listeners = new Map();
+  let socket, reconnector, disposed;
 
-  ws = new WebSocket(url, generateID());
-  ws.sid = ws.protocol;
+  const connect = () => {
+    socket = new WebSocket(url, generateID());
 
-  ws.sendSync = (event, data) => ws.send(JSON.stringify([event, data]));
+    socket.addEventListener("open", (detail) => {
+      clearTimeout(reconnector);
+      eventTarget.dispatchEvent(new CustomEvent("open", { detail }));
+    });
 
-  ws.sendAsync = (event, data, timeout = 3000) =>
+    socket.addEventListener("close", (detail) => {
+      disposed || (reconnector = setTimeout(connect, reconnectInterval));
+      eventTarget.dispatchEvent(new CustomEvent("close", { detail }));
+    });
+
+    socket.addEventListener("error", (detail) =>
+      eventTarget.dispatchEvent(new CustomEvent("error", { detail })),
+    );
+
+    socket.addEventListener("message", ({ data }) => {
+      const [event, detail] = JSON.parse(data);
+      eventTarget.dispatchEvent(new CustomEvent(event, { detail }));
+    });
+  };
+
+  const sendSync = (event, data) => socket.send(JSON.stringify([event, data]));
+
+  const sendAsync = (event, data, timeout = 3000) =>
     new Promise((resolve, reject) => {
       const trigger = ({ detail }) => {
         clearTimeout(id);
@@ -31,39 +51,42 @@ const AsyncAwaitWebsocket = (url, options) => {
         reject({ error: "WebSocket error (client): request timed out" });
       }, timeout);
 
-      ws.send(JSON.stringify([event, data]));
+      socket.send(JSON.stringify([event, data]));
       eventTarget.addEventListener(event, trigger);
     });
 
-  ws.on = (event, callback) => {
-    const cb = ({ detail }) => callback(detail);
-    eventTarget.addEventListener(event, cb);
-    ws.off = (event) => eventTarget.removeEventListener(event, cb);
+  const off = (event, callback) => {
+    const registered = listeners.get(event);
+    eventTarget.removeEventListener(event, registered?.get(callback));
+    registered?.delete(callback);
   };
 
-  ws.addEventListener("open", (detail) => {
+  const on = (event, callback) => {
+    const wrapped = ({ detail }) => callback(detail);
+    const registered = listeners.get(event) || new Map();
+    listeners.set(event, registered.set(callback, wrapped));
+    eventTarget.addEventListener(event, wrapped);
+    return () => off(event, callback);
+  };
+
+  const dispose = () => {
+    disposed = true;
     clearTimeout(reconnector);
-    eventTarget.dispatchEvent(new CustomEvent("open", { detail }));
-  });
+    socket.close();
+  };
 
-  ws.addEventListener("close", (detail) => {
-    reconnector = setTimeout(
-      AsyncAwaitWebsocket.bind(undefined, url, options),
-      reconnectInterval,
-    );
-    eventTarget.dispatchEvent(new CustomEvent("close", { detail }));
-  });
+  connect();
 
-  ws.addEventListener("error", (detail) =>
-    eventTarget.dispatchEvent(new CustomEvent("error", { detail })),
-  );
-
-  ws.addEventListener("message", ({ data }) => {
-    const [event, detail] = JSON.parse(data);
-    eventTarget.dispatchEvent(new CustomEvent(event, { detail }));
-  });
-
-  return ws;
+  return {
+    get sid() {
+      return socket.protocol;
+    },
+    sendSync,
+    sendAsync,
+    on,
+    off,
+    dispose,
+  };
 };
 
 export default AsyncAwaitWebsocket;

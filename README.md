@@ -131,11 +131,33 @@ ws.on('open', () => {
 });
 ```
 
-### `ws.sendAsync` parameters:
+Every `aaw(url, options)` call returns its own independent client — socket, event bus and reconnect timer live on that instance, so two clients in the same app never see each other's traffic.
 
-- `event name` (string, required)
-- `payload` (any, default `undefined`)
-- `timeout in ms` (integer, default `3000`)
+### `aaw(url, options)`
+
+- `url` (string, required)
+- `options.reconnectInterval` (integer, default `1000`) — delay before reconnecting after a drop.
+
+### Client API
+
+- `ws.sendAsync(event, payload, timeout)` — send and await the server's reply.
+  - `event name` (string, required)
+  - `payload` (any, default `undefined`)
+  - `timeout in ms` (integer, default `3000`)
+- `ws.sendSync(event, payload)` — fire and forget.
+- `ws.on(event, callback)` — listen for an event; returns an unsubscribe function.
+- `ws.off(event, callback)` — remove that exact registration, leaving other listeners for the same event attached.
+- `ws.sid` — the current socket id.
+- `ws.dispose()` — stop reconnecting and close the socket. This is the only supported shutdown; closing the underlying socket by other means just triggers a reconnect.
+
+```
+const unsubscribe = ws.on('notify', (data) => console.info(data));
+
+unsubscribe();       // or: ws.off('notify', callback)
+ws.dispose();        // done with this client
+```
+
+The returned client survives reconnects: it rebinds its internal socket, so a handle you stored (and the listeners registered on it) keeps working after the connection drops and comes back.
 
 ## Error handling
 
