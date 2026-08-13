@@ -14,7 +14,7 @@ Async-await-websockets is now running on Bun (https://bun.sh/). Until the most p
 - ✅ Enables `async/await` messaging from the client
 - ✅ Broadcast messages
 - ✅ Automatic reconnection
-- ❌ Procedural chat rooms
+- ✅ Rooms — targeted multicast to named subsets of connections
 - ❌ Client authentication
 
 ## How to create your own server
@@ -56,9 +56,9 @@ Default: `events`
 
 ### services (object)
 
-Third party services that you need access to in your socket events (e.g. database connection). `ws` is always exposed and cannot be removed.
+Third party services that you need access to in your socket events (e.g. database connection). `ws` and `room` are always exposed and cannot be removed.
 
-Default: `{ ws: [Websocket Object] }`
+Default: `{ ws: [Websocket Object], room: [Room API] }`
 
 ### port (integer)
 
@@ -89,6 +89,26 @@ export default async (body, services) => {
 ```
 
 Omitting the `async` keyword will treat the event as a regular websocket event.
+
+## Rooms
+
+Every event handler receives a `room` API alongside `ws`. Rooms are named subsets of connections you can multicast to — useful for chat channels, game lobbies, or any group of clients that should receive the same event. Membership is per-connection and clears automatically when a client disconnects.
+
+```
+export default (body, { ws, room }) => {
+  room.join(body.channel);
+  room.emit(body.channel, 'joined', { id: ws.data }, ws);
+};
+```
+
+### `room` API
+
+- `room.join(name)` — add the current connection to room `name` (created on demand).
+- `room.leave(name)` — remove the current connection from room `name` (room is deleted when empty).
+- `room.emit(name, event, data, except?)` — send `[event, data]` to every member of `name`, optionally skipping one connection (e.g. pass `ws` to exclude the sender). Returns the number of clients sent to.
+- `room.size(name)` — number of connections currently in room `name`.
+
+`emit` is connection-agnostic, so a later callback (e.g. a timer) can multicast to a room after the triggering message has resolved.
 
 ## Your client
 
