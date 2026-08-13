@@ -13,8 +13,10 @@ const AsyncAwaitWebsocket = (url, options) => {
   eventTarget = eventTarget || new EventTarget();
   const { reconnectInterval } = options || { reconnectInterval: 1000 };
 
-  ws = new WebSocket(url, generateID());
-  ws.sid = ws.protocol;
+  const sid = generateID();
+
+  ws = new WebSocket(url, sid);
+  ws.sid = sid;
 
   ws.sendSync = (event, data) => ws.send(JSON.stringify([event, data]));
 
