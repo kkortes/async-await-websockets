@@ -1,8 +1,0 @@
-{
-  "name": "async-await-websockets-auth-example",
-  "version": "1.0.0",
-  "type": "module",
-  "scripts": {
-    "dev": "bun --watch index.js"
-  }
-}

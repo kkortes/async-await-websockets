@@ -1,4 +1,4 @@
-const SESSION_EVENTS = [
+const AUTH_EVENTS = [
   "aaw/login",
   "aaw/register",
   "aaw/resume",
@@ -76,7 +76,7 @@ const AsyncAwaitWebsocket = (
   ws.addEventListener("message", ({ data }) => {
     const [event, detail] = JSON.parse(data);
 
-    if (SESSION_EVENTS.includes(event) && !detail?.error) state.token = detail?.token;
+    if (AUTH_EVENTS.includes(event) && !detail?.error) state.token = detail?.token;
 
     eventTarget.dispatchEvent(new CustomEvent(event, { detail }));
   });
