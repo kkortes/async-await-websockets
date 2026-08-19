@@ -28,7 +28,7 @@ export default (config) => {
     store = sqlite(database),
     session: { ttl: sessionTtl = 30 * DAY } = {},
     reset: { ttl: resetTtl = 20 * MINUTE } = {},
-    onReset,
+    onPasswordReset,
   } = config === true ? {} : config;
 
   const enabled = providers.map(named);
@@ -101,7 +101,7 @@ export default (config) => {
       authenticate: (user) => start(ws, user),
       auth: {
         store,
-        onReset,
+        onPasswordReset,
         reset: (user) => store.createReset(user, resetTtl),
         session: {
           start: (user) => start(ws, user),

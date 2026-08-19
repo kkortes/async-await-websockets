@@ -207,7 +207,7 @@ export default async ({ email, password }, { authenticate, auth: { store } }) =>
 | `aaw/login` | Bind a session to this connection |
 | `aaw/resume` | Re-bind an existing token (what reconnects use) |
 | `aaw/logout` | End the session everywhere |
-| `aaw/password/request-reset` | Mint a reset token and hand it to `onReset` |
+| `aaw/password/request-reset` | Mint a reset token and hand it to `onPasswordReset` |
 | `aaw/password/set-new` | Consume a reset token and set a new password |
 
 Reset tokens are `crypto.randomUUID()` with a real expiry, checked where the password
@@ -215,10 +215,24 @@ actually changes. Delivering one is your app's business, so aaw hands it over an
 of the mail:
 
 ```js
+import { Resend } from "resend";
+
+const resend = new Resend(process.env.RESEND_API_KEY);
+
 aaw("events", {}, 1337, undefined, {
-  onReset: ({ user, token }) => sendMail(user.email, `${SITE}/reset#${token}`),
+  onPasswordReset: ({ user, token }) =>
+    resend.emails.send({
+      from: "Acme <no-reply@acme.com>",
+      to: user.email,
+      subject: "Reset your password",
+      html: `<a href="https://acme.com/reset#${token}">Reset your password</a>`,
+    }),
 });
 ```
+
+Any sender works the same way — Resend, Postmark, SES, SMTP, or your own queue. Without an
+`onPasswordReset` handler there is no way to deliver a token, so `aaw/password/request-reset`
+answers with an error rather than a success nobody can act on.
 
 `request-reset` answers `{ ok: true }` for a known and an unknown address alike, so it
 cannot be used to enumerate accounts. Passwords are hashed with `Bun.password` (Argon2id),

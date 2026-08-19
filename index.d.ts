@@ -41,5 +41,5 @@ export type AuthConfig = {
   store?: AuthStore;
   session?: { ttl?: number };
   reset?: { ttl?: number };
-  onReset?: (reset: { user: Identity; token: string }) => any;
+  onPasswordReset?: (reset: { user: Identity; token: string }) => any;
 };
