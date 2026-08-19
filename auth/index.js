@@ -8,7 +8,7 @@ const PROTECTED = "auth/";
 
 export const reserved = (event) => event.startsWith(RESERVED);
 
-export const guarded = (event) => event.startsWith(PROTECTED);
+export const guarded = (event) => event.startsWith(PROTECTED) || event.includes(`/${PROTECTED}`);
 
 const permitted = (allowed, event) =>
   !allowed ||
