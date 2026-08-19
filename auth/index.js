@@ -22,17 +22,21 @@ const permitted = (allowed, event) =>
 const named = (provider) => (typeof provider === "string" ? { name: provider } : provider);
 
 export default (config) => {
+  const options = config === true ? {} : config;
   const {
     providers = ["sqlite"],
     database,
-    store = sqlite(database),
     session: { ttl: sessionTtl = 30 * DAY } = {},
     reset: { ttl: resetTtl = 20 * MINUTE } = {},
     onPasswordReset,
-  } = config === true ? {} : config;
+  } = options;
+
+  const store = new Proxy(options.store ?? sqlite(database), {
+    get: (target, method) =>
+      target[method] ?? (() => { throw Error("Auth is not set up via aaw"); }),
+  });
 
   const enabled = providers.map(named);
-  const names = enabled.map(({ name }) => name);
   const social = enabled.filter(({ name }) => name !== "sqlite");
 
   const start = async (ws, user) => {
@@ -47,10 +51,8 @@ export default (config) => {
   const restore = async (ws, token) => {
     const user = await store.readSession(token);
 
-    if (user) {
-      ws.identity = user;
-      ws.token = token;
-    }
+    ws.identity = user || undefined;
+    ws.token = user ? token : undefined;
 
     return user;
   };
@@ -78,8 +80,6 @@ export default (config) => {
 
   return {
     store,
-
-    supports: ({ provider }) => !provider || names.includes(provider),
 
     http: (request) => {
       const { pathname } = new URL(request.url);

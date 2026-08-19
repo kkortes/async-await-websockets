@@ -330,6 +330,17 @@ export default (body, { ws, room }) => {
 
 `emit` is connection-agnostic, so a later callback (e.g. a timer) can multicast to a room after the triggering message has resolved.
 
+### Rooms carry no authentication
+
+A socket receives a room's messages because a handler called `room.join` for it — nothing more. The guard only sees inbound calls, so it never inspects who is in a room. If a room carries data only some connections should see, gate the join: put the event that calls `room.join` under `auth/`, or guard it on `identity`. Otherwise a public event that joins a socket to a protected room lets that socket receive everything emitted to it, even though it could never write to it.
+
+```js
+// events/auth/subscribe.js — only a session can join, so only a session receives
+export default (body, { room }) => {
+  room.join(`teamplay:${body.id}`);
+};
+```
+
 ## Your client
 
 `npm install async-await-websockets`

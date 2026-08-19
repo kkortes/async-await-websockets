@@ -59,9 +59,7 @@ export default async (
   if (authentication) {
     const builtIn = await serveEndpoints(`${import.meta.dir}/events`, "");
 
-    Object.entries(handlers(builtIn))
-      .filter(([event]) => authentication.supports(builtIn[event]))
-      .forEach(([event, fn]) => (endpoints[event] = fn));
+    Object.entries(handlers(builtIn)).forEach(([event, fn]) => (endpoints[event] = fn));
   }
 
   const unreachable = authentication ? [] : Object.keys(endpoints).filter(guarded);
@@ -129,8 +127,15 @@ export default async (
     },
     websocket: {
       message: (ws, msg) => {
-        const [event, body] = JSON.parse(msg.toString());
-        const func = endpoints?.[event];
+        let event, body;
+
+        try {
+          [event, body] = JSON.parse(msg.toString());
+        } catch {
+          return;
+        }
+
+        const func = Object.hasOwn(endpoints, event) && endpoints[event];
 
         if (!func) {
           const error = `Unknown event: ${event}`;
@@ -155,26 +160,20 @@ export default async (
           size: (name) => rooms[name]?.size || 0,
         };
 
-        const resolution = func(body || {}, {
-          ws,
-          room,
-          ...services,
-          ...(authentication && authentication.context(ws)),
-        });
-
         (async () => {
-          try {
-            const res = await resolution;
-          } catch (_) {}
+          const async = func.constructor.name === "AsyncFunction";
 
-          let result,
-            error,
-            async = func.constructor.name === "AsyncFunction";
+          let result, error;
 
           try {
-            result = async ? await resolution : resolution;
+            result = await func(body || {}, {
+              ws,
+              room,
+              ...services,
+              ...(authentication && authentication.context(ws)),
+            });
           } catch (err) {
-            error = err.message ?? String(err);
+            error = err.message || String(err);
           }
 
           async && ws.send(JSON.stringify([event, error ? { error } : result]));
