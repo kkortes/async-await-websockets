@@ -57,6 +57,12 @@ export default async (
   const authentication = auth && createAuth(auth);
 
   if (authentication) {
+    const reserved = authentication.context({});
+    const collision = Object.keys(services).find((key) => Object.hasOwn(reserved, key));
+
+    if (collision)
+      throw new Error(`Service "${collision}" collides with a reserved authentication key`);
+
     const builtIn = await serveEndpoints(`${import.meta.dir}/events`, "");
 
     Object.entries(handlers(builtIn))
