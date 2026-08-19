@@ -47,18 +47,16 @@ export default async (
 ) => {
   if (!eventDir) throw new Error("`eventDir` must be set");
 
-  const authentication = auth && createAuth(auth);
   const modules = await serveEndpoints(`${process.cwd()}/${eventDir}`, "");
   const endpoints = handlers(modules);
+  const clash = auth && Object.keys(endpoints).find(reserved);
+
+  if (clash)
+    throw new Error(`"aaw/" is reserved by aaw's authentication — rename ${eventDir}/${clash}.js`);
+
+  const authentication = auth && createAuth(auth);
 
   if (authentication) {
-    const clash = Object.keys(endpoints).find(reserved);
-
-    if (clash)
-      throw new Error(
-        `"aaw/" is reserved by aaw's authentication — rename ${eventDir}/${clash}.js`,
-      );
-
     const builtIn = await serveEndpoints(`${import.meta.dir}/events`, "");
 
     Object.entries(handlers(builtIn))
