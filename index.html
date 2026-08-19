@@ -12,7 +12,7 @@
   import vibe from 'https://esm.sh/@ape-egg/vibe@3';
 
   window.$ = vibe({
-    dark: matchMedia('(prefers-color-scheme: dark)').matches,
+    dark: true,
     section: 'start'
   });
 
@@ -74,15 +74,15 @@
   }
 
   slide {
-    padding: calc(var(--unit) * 20) calc(var(--unit) * 5) calc(var(--unit) * 10);
+    padding: calc(var(--unit) * 18) calc(var(--unit) * 5) calc(var(--unit) * 7);
   }
 
   slide-inner {
     display: flex;
     flex-direction: column;
-    gap: calc(var(--unit) * 5);
+    gap: calc(var(--unit) * 4);
     width: 100%;
-    max-width: 1080px;
+    max-width: 1240px;
     margin: auto;
   }
 
@@ -100,7 +100,7 @@
   }
 
   slide h2 {
-    font-size: clamp(2rem, 5vw, 3.25rem);
+    font-size: clamp(1.9rem, 4vw, 2.6rem);
     line-height: 1.1;
     margin: 0;
   }
@@ -130,7 +130,7 @@
   code-block {
     display: flex;
     flex-direction: column;
-    gap: calc(var(--unit) * 2);
+    gap: calc(var(--unit) * 1.5);
     min-width: 0;
   }
 
@@ -171,27 +171,27 @@
 
   [codie] {
     --codie-bg: var(--card);
-    padding: calc(var(--unit) * 4);
+    padding: calc(var(--unit) * 3);
     border: 1px solid var(--border);
     border-radius: var(--radius);
-    font-size: 0.82em;
+    font-size: 0.76em;
   }
 
   code-pair {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: calc(var(--unit) * 5);
+    gap: calc(var(--unit) * 4);
     align-items: start;
   }
 
   tree-view {
     display: block;
     font-family: var(--font-mono);
-    font-size: 0.85em;
-    line-height: 1.9;
+    font-size: 0.78em;
+    line-height: 1.55;
     white-space: pre;
     overflow-x: auto;
-    padding: calc(var(--unit) * 4);
+    padding: calc(var(--unit) * 3);
     background: var(--card);
     border: 1px solid var(--border);
     border-radius: var(--radius);
@@ -227,7 +227,7 @@
 
   aaw-note {
     display: block;
-    padding: calc(var(--unit) * 3) calc(var(--unit) * 4);
+    padding: calc(var(--unit) * 2.5) calc(var(--unit) * 3.5);
     background: oklch(from var(--orange) l c h / 0.1);
     border-left: 3px solid var(--orange);
     border-radius: var(--radius);
@@ -504,9 +504,8 @@ ws.on('broadcast', (news) =&gt; console.info(news));</template>
 <slide id="auth">
   <slide-inner>
     <h2>Authentication, if you want it</h2>
-    <p>Off by default. Turn it on with a fifth argument and you get server&#8209;minted
-    sessions, a folder convention for who may call what, and a SQLite user store you never
-    have to configure.</p>
+    <p>Off by default. Turn it on with a fifth argument for server&#8209;minted sessions, a
+    folder convention for who may call what, and a SQLite store you never configure.</p>
 
     <code-block>
       <code-head>
@@ -517,36 +516,40 @@ ws.on('broadcast', (news) =&gt; console.info(news));</template>
     </code-block>
 
     <p><strong>Events under <code>auth/</code> need a session. Everything else is open.</strong>
-    Where the file sits is the rule &mdash; there is no per&#8209;file flag and no policy list
-    to keep in sync.</p>
+    Where the file sits is the rule &mdash; no per&#8209;file flag, no policy list to keep in
+    sync. A protected handler never checks a token: it reads <code>identity</code>, because
+    the runtime refused the call otherwise.</p>
 
-    <tree-view>events/
-├── <b>health.js</b>             <i>anyone</i>
+    <code-pair>
+      <code-block>
+        <code-head>
+          <code-where backend>BACKEND</code-where>
+          <code-path>events/</code-path>
+        </code-head>
+        <tree-view>├── <b>health.js</b>             <i>anyone</i>
 ├── teamplay/
 │   └── <b>list.js</b>           <i>anyone</i>
 └── auth/
     ├── <b>chat.js</b>           <i>needs a session</i>
     └── admin/
         └── <b>seed.js</b>       <i>needs a session</i></tree-view>
+      </code-block>
 
-    <p>A protected handler never checks a token. It reads <code>identity</code>, because the
-    runtime refused the call otherwise.</p>
-
-    <code-block>
-      <code-head>
-        <code-where backend>BACKEND</code-where>
-        <code-path>events/auth/chat.js</code-path>
-      </code-head>
-      <template codie highlight-js>export default async ({ id, text }, { identity, room }) =&gt; {
+      <code-block>
+        <code-head>
+          <code-where backend>BACKEND</code-where>
+          <code-path>events/auth/chat.js</code-path>
+        </code-head>
+        <template codie highlight-js>export default async ({ id, text }, { identity, room }) =&gt; {
   room.emit(`teamplay:${id}`, 'chat', { from: identity.email, text });
 
   return { ok: true };
 };</template>
-    </code-block>
+      </code-block>
+    </code-pair>
 
     <aaw-note>Leaving auth off does not open those events &mdash; it makes them unreachable,
-    and aaw lists them at boot. Forgetting to configure it can never be the thing that
-    exposes them.</aaw-note>
+    and aaw lists them at boot.</aaw-note>
   </slide-inner>
 </slide>
 
@@ -570,9 +573,7 @@ await ws.sendAsync('aaw/logout');</template>
     </code-block>
 
     <p>The session binds to the connection, so nothing carries a token in its body. Hand the
-    token back on the next page load and aaw restores the session before
-    <code>open</code> fires &mdash; so a first call made there cannot race a reconnect it
-    never saw.</p>
+    token back on the next page load and aaw restores it before <code>open</code> fires.</p>
 
     <code-block>
       <code-head>
@@ -651,8 +652,8 @@ ws.on('unauthorized', () =&gt; {
   <slide-inner>
     <h2>When your users live elsewhere</h2>
     <p>The SQLite store is a default, not a requirement. Pass <code>store</code> and aaw never
-    opens a database &mdash; useful when accounts already live in Mongo, or when a "user" is
-    an API key in a committed file.</p>
+    opens a database &mdash; for when accounts already live in Mongo, or a "user" is an API
+    key in a committed file.</p>
 
     <code-block>
       <code-head>
@@ -664,27 +665,21 @@ ws.on('unauthorized', () =&gt; {
     findUser: (email) =&gt; users.findOne({ email }),
     verify: async (email, password) =&gt; {
       const user = await users.findOne({ email });
-
-      return await Bun.password.verify(password, user?.password ?? '')
-        ? user
-        : null;
+      return await Bun.password.verify(password, user?.password ?? '') ? user : null;
     },
     createSession: async (user, ttl) =&gt; {
       const token = crypto.randomUUID();
-
       await sessions.insertOne({ token, user, expires: Date.now() + ttl });
-
       return token;
     },
-    readSession: (token) =&gt;
-      sessions.findOne({ token, expires: { $gt: Date.now() } }),
+    readSession: (token) =&gt; sessions.findOne({ token, expires: { $gt: Date.now() } }),
     endSession: (token) =&gt; sessions.deleteOne({ token })
   }
 });</template>
     </code-block>
 
-    <p>For credentials aaw knows nothing about &mdash; a licence key, a magic link, an SSO
-    assertion &mdash; write an ordinary public event and bind the session yourself.</p>
+    <p>For credentials aaw knows nothing about &mdash; a licence key, a magic link, SSO
+    &mdash; write an ordinary event and bind the session yourself.</p>
 
     <code-block>
       <code-head>
@@ -693,9 +688,7 @@ ws.on('unauthorized', () =&gt; {
       </code-head>
       <template codie highlight-js>export default async ({ licence }, { authenticate }) =&gt; {
   const user = await lookupByLicence(licence);
-
   if (!user) throw Error('Unknown licence');
-
   return authenticate(user);
 };</template>
     </code-block>
