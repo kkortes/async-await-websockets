@@ -602,20 +602,26 @@ ws.on('unauthorized', () =&gt; {
   <slide-inner>
     <h2>Password reset</h2>
     <p>aaw mints the token and verifies it. <strong>Delivering it is yours</strong> &mdash; a
-    transport library has no business holding your mail provider's credentials, so it hands
-    you the token and stays out of the way.</p>
+    transport library has no business holding your mail credentials, so it hands you the token
+    through <code>onPasswordReset</code>. Here it is with
+    <a href="https://resend.com" target="_blank">Resend</a>; Postmark, SES, SMTP or your own
+    queue plug in the same place.</p>
 
     <code-block>
       <code-head>
         <code-where backend>BACKEND</code-where>
         <code-path>index.js</code-path>
       </code-head>
-      <template codie highlight-js>aaw('events', {}, 1337, undefined, {
-  onReset: ({ user, token }) =&gt;
+      <template codie highlight-js>import { Resend } from 'resend';
+const resend = new Resend(process.env.RESEND_API_KEY);
+
+aaw('events', {}, 1337, undefined, {
+  onPasswordReset: ({ user, token }) =&gt;
     resend.emails.send({
+      from: 'Acme &lt;no-reply@acme.com&gt;',
       to: user.email,
       subject: 'Reset your password',
-      html: `&lt;a href="https://example.com/reset#${token}"&gt;Reset&lt;/a&gt;`
+      html: `&lt;a href="https://acme.com/reset#${token}"&gt;Reset your password&lt;/a&gt;`
     })
 });</template>
     </code-block>
@@ -642,9 +648,12 @@ ws.on('unauthorized', () =&gt; {
     </code-pair>
 
     <p>The token is <code>crypto.randomUUID()</code>, single use, and expires &mdash; checked
-    where the password actually changes, not only on the page that renders the form. A reset
-    requested for an unknown address answers exactly like a known one, so the endpoint cannot
-    be used to discover who has an account. On success the caller is logged straight in.</p>
+    where the password changes, not only where the form renders. An unknown address answers
+    exactly like a known one, so the endpoint cannot discover who has an account. On success
+    the caller is logged straight in.</p>
+
+    <aaw-note>Without an <code>onPasswordReset</code> handler there is no way to deliver a
+    token, so the request answers with an error rather than a success nobody can act on.</aaw-note>
   </slide-inner>
 </slide>
 
