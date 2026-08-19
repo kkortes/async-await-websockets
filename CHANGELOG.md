@@ -27,6 +27,7 @@ All notable changes to this project are documented here. This project adheres to
 
 ### Changed
 
+- **Breaking:** `auth/` is now a reserved namespace. An event under an `auth/` folder requires a session, and with auth off it is unreachable rather than public (refused with `Authentication is not enabled — <event> is unreachable`). An existing app that already used an `events/auth/` folder for something else — an OAuth callback, a webhook — must move those events out of `auth/` or turn auth on. The events are listed at boot so the break is visible before a caller hits it.
 - **Breaking:** a thrown handler error now sends `err.message` rather than `err.toString()`. The payload field is already named `error`, so the old shape prefixed every message with `"Error: "` — visible to end users wherever the string is displayed directly. Consumers that stripped the prefix should stop; consumers that displayed it raw get a cleaner message for free.
 
 ## [3.1.0]
