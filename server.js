@@ -172,7 +172,7 @@ export default async (
           try {
             result = async ? await resolution : resolution;
           } catch (err) {
-            error = err.message ?? String(err);
+            error = err.message || String(err);
           }
 
           async && ws.send(JSON.stringify([event, error ? { error } : result]));
