@@ -59,9 +59,7 @@ export default async (
   if (authentication) {
     const builtIn = await serveEndpoints(`${import.meta.dir}/events`, "");
 
-    Object.entries(handlers(builtIn))
-      .filter(([event]) => authentication.supports(builtIn[event]))
-      .forEach(([event, fn]) => (endpoints[event] = fn));
+    Object.entries(handlers(builtIn)).forEach(([event, fn]) => (endpoints[event] = fn));
   }
 
   const unreachable = authentication ? [] : Object.keys(endpoints).filter(guarded);
