@@ -58,7 +58,8 @@ const AsyncAwaitWebsocket = (
         eventTarget.dispatchEvent(new CustomEvent("unauthorized", { detail: error }));
       });
 
-    eventTarget.dispatchEvent(new CustomEvent("open", { detail }));
+    if (ws.readyState === WebSocket.OPEN)
+      eventTarget.dispatchEvent(new CustomEvent("open", { detail }));
   });
 
   ws.addEventListener("close", (detail) => {
