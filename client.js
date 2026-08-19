@@ -36,7 +36,7 @@ const AsyncAwaitWebsocket = (
 
       const id = setTimeout(() => {
         eventTarget.removeEventListener(event, trigger);
-        reject({ error: "WebSocket error (client): request timed out" });
+        reject({ error: "WebSocket error (client): request timed out", timeout: true });
       }, timeout);
 
       ws.send(JSON.stringify([event, data]));
@@ -54,6 +54,8 @@ const AsyncAwaitWebsocket = (
 
     if (state.token)
       await ws.sendAsync("aaw/resume", { token: state.token }).catch((error) => {
+        if (error.timeout) return;
+
         state.token = undefined;
         eventTarget.dispatchEvent(new CustomEvent("unauthorized", { detail: error }));
       });
