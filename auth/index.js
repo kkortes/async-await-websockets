@@ -47,10 +47,8 @@ export default (config) => {
   const restore = async (ws, token) => {
     const user = await store.readSession(token);
 
-    if (user) {
-      ws.identity = user;
-      ws.token = token;
-    }
+    ws.identity = user || undefined;
+    ws.token = user ? token : undefined;
 
     return user;
   };
