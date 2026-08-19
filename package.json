@@ -1,18 +1,20 @@
 {
   "name": "@ape-egg/async-await-websockets",
-  "version": "3.1.0",
+  "version": "3.2.0",
   "description": "A async/await solution to websockets",
   "main": "server.js",
   "types": "index.d.ts",
   "module": "client.js",
   "type": "module",
   "scripts": {
+    "test": "bun test tests/",
     "publish:check": "npm pack --dry-run",
     "publish": "bun publish:check && ./scripts/publish.sh"
   },
   "files": [
     "server.js",
     "client.js",
+    "auth",
     "index.d.ts",
     "README.md",
     "CHANGELOG.md"

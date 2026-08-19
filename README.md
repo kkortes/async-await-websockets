@@ -15,7 +15,7 @@ Async-await-websockets is now running on Bun (https://bun.sh/). Until the most p
 - ✅ Broadcast messages
 - ✅ Automatic reconnection
 - ✅ Rooms — targeted multicast to named subsets of connections
-- ❌ Client authentication
+- ✅ Client authentication (optional)
 
 ## How to create your own server
 
@@ -46,7 +46,7 @@ Your server should now be reachable on ws://localhost:1337
 
 ## Configuration
 
-`aaw(eventDir, services, port, log)`
+`aaw(eventDir, services, port, log, auth)`
 
 ### eventDir (string)
 
@@ -72,6 +72,13 @@ With the parameter signature `(event, websocketKey, async, error, body, result)`
 
 Default: `undefined`
 
+### auth (object | boolean)
+
+Optional authentication. `false` (the default) leaves aaw a pure transport; `true` enables it
+with the built-in SQLite store. See [Authentication](#authentication).
+
+Default: `false`
+
 ## Your server
 
 `aaw` returns an `Bun websocket`-instance (https://bun.sh/docs/api/websockets)
@@ -89,6 +96,159 @@ export default async (body, services) => {
 ```
 
 Omitting the `async` keyword will treat the event as a regular websocket event.
+
+## Authentication
+
+Off by default — aaw stays the transport it has always been. Switch it on with a fifth
+argument and you get server-minted sessions, a folder convention for who may call what, and
+a SQLite user store you never have to configure.
+
+```js
+aaw("events", { mongo }, 1337, log, true);
+```
+
+### The folder convention
+
+With auth enabled, **events under `public/` are open and everything else needs a session.**
+No per-file flag, no central policy list — where the file sits *is* the rule, the same way
+its path is already its name.
+
+```
+events/public/health.js     → "public/health"   anyone
+events/teamplay/chat.js     → "teamplay/chat"   needs a session
+events/admin/reseed.js      → "admin/reseed"    needs a session
+```
+
+The default is deny because enabling auth is a statement that this server has users. A new
+event file is protected the moment you create it; forgetting to mark something public fails
+loudly, which is the direction worth failing in.
+
+### Connecting
+
+The connection itself is free — anyone may open a socket. What a token buys is the right to
+call anything outside `public/`.
+
+```js
+import aaw from "@ape-egg/async-await-websockets/client.js";
+
+const ws = aaw("wss://example.com");
+
+await ws.login({ email, password });      // or ws.login(credentials, "auth/register")
+await ws.sendAsync("teamplay/chat", { id, text });   // no token in the body
+await ws.logout();
+```
+
+The session binds to the connection, so it is established once rather than re-proven on
+every message. Handlers receive it as `identity`:
+
+```js
+export default async ({ id, text }, { identity, room }) => {
+  room.emit(`teamplay:${id}`, "chat", { from: identity.email, text });
+};
+```
+
+`ws.login` remembers the token and replays it after an automatic reconnect, before `open`
+fires — so a first call made inside `open` cannot race a reconnect it never saw. If the
+session has expired by then the client emits `unauthorized` instead.
+
+Store the token yourself to survive a page reload:
+
+```js
+const ws = aaw("wss://example.com", { token: localStorage.token });
+ws.on("unauthorized", () => delete localStorage.token);
+```
+
+### Built-in events
+
+Reserved under `auth/` while authentication is on, and always reachable — a caller has to be
+able to log in before it holds anything to log in with. An event file of your own that
+collides with one of these stops the server at boot rather than being silently shadowed.
+
+| Event | Does |
+|---|---|
+| `auth/register` | Create an account and bind a session |
+| `auth/login` | Bind a session to this connection |
+| `auth/resume` | Re-bind an existing token (what reconnects use) |
+| `auth/logout` | End the session everywhere |
+| `auth/password/request-reset` | Mint a reset token and hand it to `onReset` |
+| `auth/password/set-new` | Consume a reset token and set a new password |
+
+Reset tokens are `crypto.randomUUID()` with a real expiry, checked where the password
+actually changes. Delivering one is your app's business, so aaw hands it over and stays out
+of the mail:
+
+```js
+aaw("events", {}, 1337, undefined, {
+  onReset: ({ user, token }) => sendMail(user.email, `${SITE}/reset#${token}`),
+});
+```
+
+`request-reset` answers `{ ok: true }` for a known and an unknown address alike, so it
+cannot be used to enumerate accounts. Passwords are hashed with `Bun.password` (Argon2id),
+which is what makes a guessed password cost the attacker real CPU on every attempt.
+
+### Permissions
+
+An identity may carry `allowed` — globs matched against the event path. Without it, any
+session may call any protected event.
+
+```js
+{ allowed: ["teamplay/*"] }   // a player
+{ allowed: ["*"] }            // an admin
+```
+
+### Providers
+
+`providers` defaults to `["sqlite"]`, aaw's built-in store. Naming any other provider turns
+the built-in password login off unless you list it too.
+
+```js
+aaw("events", {}, 1337, undefined, {
+  providers: ["sqlite", { name: "google", clientId, clientSecret, start, callback }],
+});
+```
+
+A social provider redirects a browser, so it arrives over HTTP rather than the socket — the
+only reason aaw ever answers a plain request. aaw owns the session half (find or create the
+user, link `provider` + `subject`, mint a token, redirect back with it in the URL fragment);
+a provider owns the handshake half, as two functions:
+
+```js
+{
+  name: "google",
+  redirect: "/",                                  // token arrives as #token=…
+  start: (request) => Response.redirect(authorizeUrl, 302),
+  callback: async (request) => ({ subject, email }),   // verified profile
+}
+```
+
+**No OAuth provider ships yet** — the store, the routes and the contract are in place so one
+can be added as a small module, and so social login does not need a schema change later.
+
+### Bringing your own store
+
+The SQLite store is a default, not a requirement. Pass `store` and aaw never opens a
+database — useful when users already live in mongo, or when "users" are API keys in a
+committed file.
+
+```js
+aaw("events", { mongo }, 1337, undefined, {
+  store: {
+    findUser: (email) => …,
+    verify: async (email, password) => identity | null,
+    createSession: (user, ttl) => token,
+    readSession: (token) => identity | null,
+    endSession: (token) => …,
+  },
+});
+```
+
+Your own login event can bind a session directly, for credentials aaw knows nothing about:
+
+```js
+export default async ({ license }, { authenticate }) =>
+  authenticate(await lookupByLicense(license));
+```
 
 ## Rooms
 

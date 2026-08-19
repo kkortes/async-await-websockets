@@ -2,6 +2,8 @@ import fs from "node:fs";
 import { normalize } from "node:path";
 import { pathToFileURL } from "node:url";
 
+import createAuth, { reserved } from "./auth/index.js";
+
 const { serve } = Bun;
 
 const serveEndpoints = async (root, path) => {
@@ -40,10 +42,23 @@ export default async (
   services = {},
   port = 1337,
   log = undefined,
+  auth = false,
 ) => {
   if (!eventDir) throw new Error("`eventDir` must be set");
 
+  const authentication = auth && createAuth(auth);
   const endpoints = await serveEndpoints(eventDir, "");
+
+  if (authentication) {
+    const clash = Object.keys(endpoints).find(reserved);
+
+    if (clash)
+      throw new Error(
+        `"auth/" is reserved by aaw's authentication — rename ${eventDir}/${clash}.js`,
+      );
+
+    Object.assign(endpoints, authentication.events);
+  }
 
   const clientPool = {};
 
@@ -84,7 +99,7 @@ export default async (
     return sent;
   };
 
-  serve({
+  const server = serve({
     port,
     fetch: (req, server) => {
       // A hack: use sec-websocket-protocol as the socket id (named `data` in Bun)
@@ -93,9 +108,14 @@ export default async (
       )
         return;
 
-      return new Response("Couldn't upgrade the websocket, handshake failed", {
-        status: 500,
-      });
+      // Anything that is not an upgrade is a social provider redirecting a
+      // browser back to us — the only reason aaw ever answers plain HTTP.
+      return (
+        (authentication && authentication.http(req)) ||
+        new Response("Couldn't upgrade the websocket, handshake failed", {
+          status: 500,
+        })
+      );
     },
     websocket: {
       message: (ws, msg) => {
@@ -109,6 +129,13 @@ export default async (
           return;
         }
 
+        const denied = authentication && authentication.guard(event, ws);
+
+        if (denied) {
+          ws.send(JSON.stringify([event, { error: denied }]));
+          return;
+        }
+
         const room = {
           join: (name) => joinRoom(ws, name),
           leave: (name) => leaveRoom(ws, name),
@@ -116,7 +143,12 @@ export default async (
           size: (name) => rooms[name]?.size || 0,
         };
 
-        const resolution = func(body || {}, { ws, room, ...services });
+        const resolution = func(body || {}, {
+          ws,
+          room,
+          ...services,
+          ...(authentication && authentication.context(ws)),
+        });
 
         (async () => {
           try {
@@ -130,7 +162,9 @@ export default async (
           try {
             result = async ? await resolution : resolution;
           } catch (err) {
-            error = err.toString();
+            // The payload field is already named `error` — a stringified Error
+            // prefixes every message with "Error: " on its way to a user.
+            error = err.message ?? String(err);
           }
 
           async && ws.send(JSON.stringify([event, error ? { error } : result]));
@@ -140,6 +174,7 @@ export default async (
               {
                 event,
                 websocketKey: ws.data,
+                identity: ws.identity,
                 async,
                 body: body || {},
                 result,
@@ -165,4 +200,6 @@ export default async (
   });
 
   console.info(`Server started on port ${port}`);
+
+  return server;
 };

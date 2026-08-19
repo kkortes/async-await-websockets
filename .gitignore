@@ -3,3 +3,8 @@ node_modules
 .vscode
 # Claude
 .claude/
+
+# Auth
+*.sqlite
+*.sqlite-shm
+*.sqlite-wal
