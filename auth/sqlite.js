@@ -27,7 +27,6 @@ const SCHEMA = `
   );
 `;
 
-// What an event handler receives as `identity` — the password hash never leaves here.
 const identity = (row) => row && { id: row.id, email: row.email };
 
 export default (filename = "aaw-auth.sqlite") => {
@@ -87,8 +86,6 @@ export default (filename = "aaw-auth.sqlite") => {
       return identity(userById.get({ $id: id }));
     },
 
-    // Argon2id by default, so a guessed password costs the attacker real CPU on
-    // every attempt. An account with no password (provider-only) never verifies.
     verify: async (email, password) => {
       const row = userByEmail.get({ $email: email });
 
@@ -130,8 +127,6 @@ export default (filename = "aaw-auth.sqlite") => {
       return token;
     },
 
-    // Expiry is enforced where the password actually changes, not only wherever
-    // the link happened to be checked on the way in.
     consumeReset: async (token, password) => {
       const row = resetByToken.get({ $token: token, $now: Date.now() });
 

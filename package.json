@@ -7,7 +7,6 @@
   "module": "client.js",
   "type": "module",
   "scripts": {
-    "test": "bun test tests/",
     "publish:check": "npm pack --dry-run",
     "publish": "bun publish:check && ./scripts/publish.sh"
   },
@@ -15,6 +14,7 @@
     "server.js",
     "client.js",
     "auth",
+    "aaw-events",
     "index.d.ts",
     "README.md",
     "CHANGELOG.md"

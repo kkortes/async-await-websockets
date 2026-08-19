@@ -3,21 +3,15 @@ import sqlite from "./sqlite.js";
 const MINUTE = 60 * 1000;
 const DAY = 24 * 60 * MINUTE;
 
-// aaw's own events. Reserved while auth is enabled, and never gated — a caller
-// has to be able to log in before it holds anything to log in with, which is
-// also why they cannot live under auth/ themselves.
 const RESERVED = "aaw/";
-
-// The folder convention: events under auth/ require a session, everything else
-// is open.
 const PROTECTED = "auth/";
 
 export const reserved = (event) => event.startsWith(RESERVED);
 
 export const guarded = (event) => event.startsWith(PROTECTED);
 
-// An identity may carry `allowed` globs, matched against the event path — the
-// same shape belt gives an API key, so "which identity" needs no second concept.
+export const prefixed = (event) => `${RESERVED}${event}`;
+
 const permitted = (allowed, event) =>
   !allowed ||
   allowed.some(
@@ -40,14 +34,10 @@ export default (config) => {
   } = config === true ? {} : config;
 
   const enabled = providers.map(named);
-  const passwords = enabled.find(({ name }) => name === "sqlite");
+  const names = enabled.map(({ name }) => name);
   const social = enabled.filter(({ name }) => name !== "sqlite");
 
-  const requirePasswords = () => {
-    if (!passwords) throw Error("Password login is not an enabled provider");
-  };
-
-  const bind = async (ws, user) => {
+  const start = async (ws, user) => {
     const token = await store.createSession(user, sessionTtl);
 
     ws.identity = user;
@@ -56,81 +46,26 @@ export default (config) => {
     return { token, user };
   };
 
-  const events = {
-    "aaw/register": async ({ email, password }, { ws }) => {
-      requirePasswords();
+  const restore = async (ws, token) => {
+    const user = await store.readSession(token);
 
-      if (!email || !password) throw Error("Email and password are required");
-      if (await store.findUser(email)) throw Error("Email already registered");
-
-      return bind(ws, await store.createUser({ email, password }));
-    },
-
-    "aaw/login": async ({ email, password }, { ws }) => {
-      requirePasswords();
-
-      const user = await store.verify(email, password);
-
-      if (!user) throw Error("Invalid credentials");
-
-      return bind(ws, user);
-    },
-
-    // What the client replays after an automatic reconnect, and what a browser
-    // calls with the token an OAuth callback handed it.
-    "aaw/resume": async ({ token }, { ws }) => {
-      const user = await store.readSession(token);
-
-      if (!user) throw Error("Session expired");
-
+    if (user) {
       ws.identity = user;
       ws.token = token;
+    }
 
-      return { token, user };
-    },
-
-    "aaw/logout": async (_, { ws }) => {
-      ws.token && (await store.endSession(ws.token));
-
-      ws.identity = undefined;
-      ws.token = undefined;
-
-      return { ok: true };
-    },
-
-    // The token is random and expires. Delivering it is the app's business, so
-    // aaw hands it to `onReset` and stays out of the mail.
-    "aaw/password/request-reset": async ({ email }) => {
-      requirePasswords();
-
-      const user = await store.findUser(email);
-
-      if (user) await onReset?.({ user, token: await store.createReset(user, resetTtl) });
-
-      // The same answer either way, so this cannot be used to enumerate accounts.
-      return { ok: true };
-    },
-
-    "aaw/password/set-new": async ({ token, password }, { ws }) => {
-      requirePasswords();
-
-      if (!password) throw Error("A new password is required");
-
-      const user = await store.consumeReset(token, password);
-
-      if (!user) throw Error("Reset link is invalid or expired");
-
-      return bind(ws, user);
-    },
+    return user;
   };
 
-  // Social providers redirect a browser, so they arrive over HTTP rather than
-  // the socket. aaw owns the session half; a provider owns the handshake half.
-  const complete = async (provider, request) => {
+  const end = async (ws) => {
+    ws.token && (await store.endSession(ws.token));
+
+    ws.identity = undefined;
+    ws.token = undefined;
+  };
+
+  const link = async (provider, request) => {
     const { subject, email } = await provider.callback(request);
-    // An address already registered here is the same person, so the provider is
-    // linked to that account rather than colliding with it — which holds only
-    // because `callback` is required to return an address the provider verified.
     const user =
       (await store.findByProvider({ provider: provider.name, subject })) ??
       (email && (await store.findUser(email))) ??
@@ -144,9 +79,9 @@ export default (config) => {
   };
 
   return {
-    events,
-
     store,
+
+    supports: ({ provider }) => !provider || names.includes(provider),
 
     http: (request) => {
       const { pathname } = new URL(request.url);
@@ -154,7 +89,7 @@ export default (config) => {
 
       if (!provider) return;
 
-      return pathname.endsWith("/callback") ? complete(provider, request) : provider.start(request);
+      return pathname.endsWith("/callback") ? link(provider, request) : provider.start(request);
     },
 
     guard: (event, ws) => {
@@ -165,8 +100,17 @@ export default (config) => {
 
     context: (ws) => ({
       identity: ws.identity,
-      // What a consumer's own login event calls when it brings its own user store.
-      authenticate: (user) => bind(ws, user),
+      authenticate: (user) => start(ws, user),
+      auth: {
+        store,
+        onReset,
+        reset: (user) => store.createReset(user, resetTtl),
+        session: {
+          start: (user) => start(ws, user),
+          restore: (token) => restore(ws, token),
+          end: () => end(ws),
+        },
+      },
     }),
   };
 };

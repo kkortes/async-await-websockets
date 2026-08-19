@@ -1,3 +1,11 @@
+const SESSION_EVENTS = [
+  "aaw/login",
+  "aaw/register",
+  "aaw/resume",
+  "aaw/logout",
+  "aaw/password/set-new",
+];
+
 const generateID = () =>
   `_${
     Number(String(Math.random()).slice(2)) +
@@ -5,9 +13,6 @@ const generateID = () =>
     Math.round(performance.now()).toString(36)
   }`;
 
-// `state` is created on the first call and carried through internal reconnects,
-// so listeners registered via ws.on survive one — and two clients in the same
-// process keep their own, rather than resolving each other's sendAsync calls.
 const AsyncAwaitWebsocket = (
   url,
   options = {},
@@ -38,25 +43,6 @@ const AsyncAwaitWebsocket = (
       eventTarget.addEventListener(event, trigger);
     });
 
-  // The session lives on the connection, and the token is what re-establishes it
-  // after an automatic reconnect — so it is held here rather than by the caller.
-  ws.authenticate = async (token) => {
-    const session = await ws.sendAsync("aaw/resume", { token });
-    state.token = session.token;
-    return session;
-  };
-
-  ws.login = async (credentials, event = "aaw/login") => {
-    const session = await ws.sendAsync(event, credentials);
-    state.token = session.token;
-    return session;
-  };
-
-  ws.logout = async () => {
-    await ws.sendAsync("aaw/logout");
-    state.token = undefined;
-  };
-
   ws.on = (event, callback) => {
     const cb = ({ detail }) => callback(detail);
     eventTarget.addEventListener(event, cb);
@@ -66,10 +52,8 @@ const AsyncAwaitWebsocket = (
   ws.addEventListener("open", async (detail) => {
     clearTimeout(state.reconnector);
 
-    // Restore the session before anyone hears about the socket, so a caller's
-    // first request inside `open` cannot race a reconnect it never saw.
     if (state.token)
-      await ws.authenticate(state.token).catch((error) => {
+      await ws.sendAsync("aaw/resume", { token: state.token }).catch((error) => {
         state.token = undefined;
         eventTarget.dispatchEvent(new CustomEvent("unauthorized", { detail: error }));
       });
@@ -91,6 +75,9 @@ const AsyncAwaitWebsocket = (
 
   ws.addEventListener("message", ({ data }) => {
     const [event, detail] = JSON.parse(data);
+
+    if (SESSION_EVENTS.includes(event) && !detail?.error) state.token = detail?.token;
+
     eventTarget.dispatchEvent(new CustomEvent(event, { detail }));
   });
 

@@ -2,24 +2,22 @@ import fs from "node:fs";
 import { normalize } from "node:path";
 import { pathToFileURL } from "node:url";
 
-import createAuth, { guarded, reserved } from "./auth/index.js";
+import createAuth, { guarded, prefixed, reserved } from "./auth/index.js";
 
 const { serve } = Bun;
 
 const serveEndpoints = async (root, path) => {
   const endpoints = fetchEndpoints(root, path);
-  const results = await Promise.all(Object.values(endpoints));
+  const modules = await Promise.all(Object.values(endpoints));
 
-  return Object.keys(endpoints).reduce((a, key, i) => {
-    const func = results[i].default;
-    return func ? { ...a, [key]: func } : a;
-  }, {});
+  return Object.keys(endpoints).reduce(
+    (a, key, i) => (modules[i].default ? { ...a, [key]: modules[i] } : a),
+    {},
+  );
 };
 
 const fetchEndpoints = (root, path, b = {}) => {
-  const projectRoot = process.cwd();
-  const scanDir = `${root}${path}`;
-  const fullPath = `${projectRoot}/${scanDir}`;
+  const fullPath = `${root}${path}`;
   const filesAtDepth = fs.readdirSync(`${fullPath}`);
 
   return filesAtDepth.reduce((a, file) => {
@@ -37,6 +35,9 @@ const fetchEndpoints = (root, path, b = {}) => {
   }, b);
 };
 
+const handlers = (modules) =>
+  Object.fromEntries(Object.entries(modules).map(([event, { default: fn }]) => [event, fn]));
+
 export default async (
   eventDir = "events",
   services = {},
@@ -47,7 +48,8 @@ export default async (
   if (!eventDir) throw new Error("`eventDir` must be set");
 
   const authentication = auth && createAuth(auth);
-  const endpoints = await serveEndpoints(eventDir, "");
+  const modules = await serveEndpoints(`${process.cwd()}/${eventDir}`, "");
+  const endpoints = handlers(modules);
 
   if (authentication) {
     const clash = Object.keys(endpoints).find(reserved);
@@ -57,11 +59,13 @@ export default async (
         `"aaw/" is reserved by aaw's authentication — rename ${eventDir}/${clash}.js`,
       );
 
-    Object.assign(endpoints, authentication.events);
+    const builtIn = await serveEndpoints(`${import.meta.dir}/aaw-events`, "");
+
+    Object.entries(handlers(builtIn))
+      .filter(([event]) => authentication.supports(builtIn[event]))
+      .forEach(([event, fn]) => (endpoints[prefixed(event)] = fn));
   }
 
-  // Events under auth/ are unreachable rather than open when authentication is
-  // off, so leaving it off can never be the thing that exposes them.
   const unreachable = authentication ? [] : Object.keys(endpoints).filter(guarded);
 
   if (unreachable.length)
@@ -118,8 +122,6 @@ export default async (
       )
         return;
 
-      // Anything that is not an upgrade is a social provider redirecting a
-      // browser back to us — the only reason aaw ever answers plain HTTP.
       return (
         (authentication && authentication.http(req)) ||
         new Response("Couldn't upgrade the websocket, handshake failed", {
@@ -174,8 +176,6 @@ export default async (
           try {
             result = async ? await resolution : resolution;
           } catch (err) {
-            // The payload field is already named `error` — a stringified Error
-            // prefixes every message with "Error: " on its way to a user.
             error = err.message ?? String(err);
           }
 

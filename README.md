@@ -145,10 +145,13 @@ import aaw from "@ape-egg/async-await-websockets/client.js";
 
 const ws = aaw("wss://example.com");
 
-await ws.login({ email, password });      // or ws.login(credentials, "aaw/register")
-await ws.sendAsync("auth/chat", { id, text });   // no token in the body
-await ws.logout();
+await ws.sendAsync("aaw/login", { email, password });
+await ws.sendAsync("auth/chat", { id, text });
+await ws.sendAsync("aaw/logout");
 ```
+
+There is no separate login API — aaw's own events are called the way every other event
+is.
 
 The session binds to the connection, so it is established once rather than re-proven on
 every message. Handlers receive it as `identity`:
@@ -159,9 +162,9 @@ export default async ({ id, text }, { identity, room }) => {
 };
 ```
 
-`ws.login` remembers the token and replays it after an automatic reconnect, before `open`
-fires — so a first call made inside `open` cannot race a reconnect it never saw. If the
-session has expired by then the client emits `unauthorized` instead.
+The client keeps the token from those events and replays it after an automatic reconnect,
+before `open` fires — so a first call made inside `open` cannot race a reconnect it never
+saw. If the session has expired by then the client emits `unauthorized` instead.
 
 Store the token yourself to survive a page reload:
 
@@ -172,10 +175,31 @@ ws.on("unauthorized", () => delete localStorage.token);
 
 ### Built-in events
 
-aaw's own events live under `aaw/`, reserved while authentication is on. They cannot sit
-under `auth/` themselves — a caller has to be able to log in before it holds anything to log
-in with. An event file of your own that collides stops the server at boot rather than being
+aaw's own events live in the package's `aaw-events/` folder, one file per event, and are
+registered under `aaw/` alongside yours when authentication is on. They cannot sit under
+`auth/` themselves — a caller has to be able to log in before it holds anything to log in
+with. An event file of your own that collides stops the server at boot rather than being
 silently shadowed.
+
+```
+aaw-events/login.js                   → "aaw/login"
+aaw-events/password/request-reset.js  → "aaw/password/request-reset"
+```
+
+They are ordinary event files. Each declares the provider it belongs to, so naming a
+different provider simply leaves it unregistered:
+
+```js
+export const provider = "sqlite";
+
+export default async ({ email, password }, { authenticate, auth: { store } }) => {
+  const user = await store.verify(email, password);
+
+  if (!user) throw Error("Invalid credentials");
+
+  return authenticate(user);
+};
+```
 
 | Event | Does |
 |---|---|
@@ -260,6 +284,8 @@ aaw("events", { mongo }, 1337, undefined, {
   },
 });
 ```
+
+A store only needs what the features you enable actually call.
 
 Your own login event can bind a session directly, for credentials aaw knows nothing about:
 
