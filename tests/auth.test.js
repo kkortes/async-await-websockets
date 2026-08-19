@@ -14,7 +14,7 @@ beforeAll(async () => {
   await aaw("tests/events", {}, PORT, undefined, {
     providers: ["sqlite"],
     database: DATABASE,
-    onReset: ({ token }) => (lastReset = token),
+    onPasswordReset: ({ token }) => (lastReset = token),
   });
 });
 
