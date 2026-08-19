@@ -1,0 +1,711 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>aaw — async/await over WebSockets</title>
+<link rel="stylesheet" href="./stylecheat.css">
+<link rel="stylesheet" href="https://esm.sh/@ape-egg/codie@0.1.3/codie.css">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%235b7cfa'/%3E%3Cpath d='M7 20c3-8 6-8 9 0s6 8 9 0' stroke='%23fff' stroke-width='3' fill='none' stroke-linecap='round'/%3E%3C/svg%3E">
+<script type="module">
+  import codie from 'https://esm.sh/@ape-egg/codie@0.1.3/codie.js';
+  import vibe from 'https://esm.sh/@ape-egg/vibe@3';
+
+  window.$ = vibe({
+    dark: matchMedia('(prefers-color-scheme: dark)').matches,
+    section: 'start'
+  });
+
+  const renderCode = () =>
+    document.querySelectorAll('template[codie]:not(:has(pre))').forEach((el) => codie(el));
+
+  renderCode();
+  $.on('afterUpdate', renderCode);
+
+  const observer = new IntersectionObserver(
+    (entries) =>
+      entries
+        .filter(({ isIntersecting }) => isIntersecting)
+        .forEach(({ target }) => ($.section = target.id)),
+    { threshold: 0.5 }
+  );
+
+  document.querySelectorAll('slide[id]').forEach((slide) => observer.observe(slide));
+</script>
+<style>
+  html,
+  body {
+    height: 100%;
+  }
+
+  body {
+    background: var(--background);
+    font-family: var(--font-sans);
+    margin: 0;
+  }
+
+  aaw-nav {
+    position: fixed;
+    inset: 0 0 auto;
+    z-index: 2;
+    padding: calc(var(--unit) * 3) calc(var(--unit) * 5);
+    background: oklch(from var(--background) l c h / 0.8);
+    backdrop-filter: blur(10px);
+    border-bottom: 1px solid var(--border);
+  }
+
+  aaw-nav a {
+    font-size: 0.85em;
+    color: var(--muted-foreground);
+  }
+
+  aaw-nav a[active] {
+    color: var(--primary);
+  }
+
+  aaw-mark {
+    font-family: var(--font-mono);
+    font-weight: 700;
+    letter-spacing: 0.02em;
+  }
+
+  carousel {
+    height: 100dvh;
+  }
+
+  slide {
+    padding: calc(var(--unit) * 20) calc(var(--unit) * 5) calc(var(--unit) * 10);
+  }
+
+  slide-inner {
+    display: flex;
+    flex-direction: column;
+    gap: calc(var(--unit) * 5);
+    width: 100%;
+    max-width: 1080px;
+    margin: auto;
+  }
+
+  slide-inner[center] {
+    align-items: center;
+    text-align: center;
+    gap: calc(var(--unit) * 6);
+  }
+
+  slide h1 {
+    font-family: var(--font-mono);
+    font-size: clamp(4rem, 16vw, 9rem);
+    line-height: 1;
+    margin: 0;
+  }
+
+  slide h2 {
+    font-size: clamp(2rem, 5vw, 3.25rem);
+    line-height: 1.1;
+    margin: 0;
+  }
+
+  aaw-lead {
+    display: block;
+    font-size: 1.1em;
+    color: var(--muted-foreground);
+    max-width: 68ch;
+  }
+
+  slide-inner[center] aaw-lead {
+    font-size: 1.35em;
+  }
+
+  scroll-cue {
+    display: block;
+    color: var(--muted-foreground);
+    animation: bob 1.6s ease-in-out infinite;
+  }
+
+  @keyframes bob {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(calc(var(--unit) * 2)); }
+  }
+
+  code-block {
+    display: flex;
+    flex-direction: column;
+    gap: calc(var(--unit) * 2);
+    min-width: 0;
+  }
+
+  code-head {
+    display: flex;
+    align-items: center;
+    gap: calc(var(--unit) * 2);
+  }
+
+  code-where {
+    font-family: var(--font-mono);
+    font-size: 0.65rem;
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    padding: calc(var(--unit) * 0.75) calc(var(--unit) * 2);
+    border-radius: 999px;
+    flex: none;
+  }
+
+  code-where[backend] {
+    background: oklch(from var(--purple) l c h / 0.16);
+    color: var(--purple);
+  }
+
+  code-where[frontend] {
+    background: oklch(from var(--blue) l c h / 0.16);
+    color: var(--blue);
+  }
+
+  code-path {
+    font-family: var(--font-mono);
+    font-size: 0.8em;
+    color: var(--muted-foreground);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  [codie] {
+    --codie-bg: var(--card);
+    padding: calc(var(--unit) * 4);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    font-size: 0.82em;
+  }
+
+  code-pair {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: calc(var(--unit) * 5);
+    align-items: start;
+  }
+
+  tree-view {
+    display: block;
+    font-family: var(--font-mono);
+    font-size: 0.85em;
+    line-height: 1.9;
+    white-space: pre;
+    overflow-x: auto;
+    padding: calc(var(--unit) * 4);
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+  }
+
+  tree-view b {
+    color: var(--primary);
+    font-weight: 600;
+  }
+
+  tree-view i {
+    color: var(--muted-foreground);
+    font-style: normal;
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    text-align: left;
+    font-size: 0.9em;
+  }
+
+  th, td {
+    padding: calc(var(--unit) * 2);
+    border-bottom: 1px solid var(--border);
+    vertical-align: top;
+  }
+
+  td:first-child {
+    font-family: var(--font-mono);
+    white-space: nowrap;
+  }
+
+  aaw-note {
+    display: block;
+    padding: calc(var(--unit) * 3) calc(var(--unit) * 4);
+    background: oklch(from var(--orange) l c h / 0.1);
+    border-left: 3px solid var(--orange);
+    border-radius: var(--radius);
+    font-size: 0.9em;
+    max-width: 80ch;
+  }
+
+  p {
+    max-width: 76ch;
+    margin: 0;
+  }
+
+  * {
+    scrollbar-color: oklch(from var(--foreground) l c h / 0.2) transparent;
+  }
+
+  @media (max-width: 900px) {
+    code-pair {
+      grid-template-columns: 1fr;
+    }
+
+    aaw-nav crow a {
+      display: none;
+    }
+
+    slide {
+      padding: calc(var(--unit) * 18) calc(var(--unit) * 4) calc(var(--unit) * 8);
+    }
+
+    [codie],
+    tree-view {
+      font-size: 0.7em;
+    }
+  }
+</style>
+</head>
+<body class="stylecheat" dark="@[dark]" vibe-fouc>
+
+<aaw-nav>
+  <crow left g-4 w-full justify-between>
+    <crow left g-4>
+      <aaw-mark>aaw</aaw-mark>
+      <a href="#start" active="@[section === 'start']">start</a>
+      <a href="#events" active="@[section === 'events']">events</a>
+      <a href="#errors" active="@[section === 'errors']">errors</a>
+      <a href="#push" active="@[section === 'push']">push</a>
+      <a href="#auth" active="@[section === 'auth']">auth</a>
+      <a href="#sessions" active="@[section === 'sessions']">sessions</a>
+      <a href="#reset" active="@[section === 'reset']">reset</a>
+      <a href="#store" active="@[section === 'store']">store</a>
+    </crow>
+    <crow left g-2>
+      <a href="https://github.com/kkortes/async-await-websockets" target="_blank" secondary>
+        <icon logo-github></icon>
+      </a>
+      <button tertiary onclick="$.dark = !$.dark">
+        <!-- if dark -->
+        <icon dark text-blue></icon>
+        <!-- else -->
+        <icon light text-yellow></icon>
+        <!-- /if -->
+      </button>
+    </crow>
+  </crow>
+</aaw-nav>
+
+<carousel>
+<slides y scrollbar>
+
+<slide id="start">
+  <slide-inner center>
+    <h1>aaw</h1>
+    <aaw-lead>async/await over WebSockets. Your backend is a folder of functions, and every
+    file in it is callable from the browser as if it were local.</aaw-lead>
+    <crow left g-2>
+      <badge secondary>Bun</badge>
+      <badge secondary>Zero dependencies</badge>
+      <badge secondary>Rooms</badge>
+      <badge secondary>Optional auth</badge>
+    </crow>
+    <scroll-cue><icon chevron-down></icon></scroll-cue>
+  </slide-inner>
+</slide>
+
+<slide id="install">
+  <slide-inner>
+    <h2>Your first server</h2>
+    <p>Point aaw at a folder. Every <code>.js</code> file in it becomes an event the client
+    can await.</p>
+
+    <code-pair>
+      <code-block>
+        <code-head>
+          <code-where backend>BACKEND</code-where>
+          <code-path>index.js</code-path>
+        </code-head>
+        <template codie highlight-js>import aaw from '@ape-egg/async-await-websockets';
+
+aaw('events');</template>
+      </code-block>
+
+      <code-block>
+        <code-head>
+          <code-where backend>BACKEND</code-where>
+          <code-path>events/greet.js</code-path>
+        </code-head>
+        <template codie highlight-js>export default async ({ name }) => ({
+  greeting: `Hello ${name}`
+});</template>
+      </code-block>
+    </code-pair>
+
+    <code-block>
+      <code-head>
+        <code-where frontend>FRONTEND</code-where>
+        <code-path>app.js</code-path>
+      </code-head>
+      <template codie highlight-js>import aaw from '@ape-egg/async-await-websockets/client.js';
+
+const ws = aaw('ws://localhost:1337');
+
+ws.on('open', async () => {
+  const { greeting } = await ws.sendAsync('greet', { name: 'Kim' });
+
+  console.info(greeting);
+});</template>
+    </code-block>
+  </slide-inner>
+</slide>
+
+<slide id="events">
+  <slide-inner>
+    <h2>Events are files</h2>
+    <p>The path is the name. A folder is a namespace, and adding a capability is adding a
+    file &mdash; there is no router to register with and no client to regenerate.</p>
+
+    <tree-view>events/
+├── <b>greet.js</b>              <i>→ ws.sendAsync('greet')</i>
+├── teamplay/
+│   ├── <b>list.js</b>           <i>→ ws.sendAsync('teamplay/list')</i>
+│   └── <b>chat.js</b>           <i>→ ws.sendAsync('teamplay/chat')</i>
+└── user/
+    └── <b>statistics.js</b>     <i>→ ws.sendAsync('user/statistics')</i></tree-view>
+
+    <p>An <code>async</code> handler replies to the caller. Drop the keyword and the event is
+    fire&#8209;and&#8209;forget &mdash; nothing is sent back.</p>
+
+    <code-pair>
+      <code-block>
+        <code-head>
+          <code-where backend>BACKEND</code-where>
+          <code-path>events/teamplay/list.js</code-path>
+        </code-head>
+        <template codie highlight-js>export default async (body, { mongo }) =&gt;
+  mongo.collection('teamplays').find().toArray();</template>
+      </code-block>
+
+      <code-block>
+        <code-head>
+          <code-where backend>BACKEND</code-where>
+          <code-path>events/track.js</code-path>
+        </code-head>
+        <template codie highlight-js>export default (body, { ws }) =&gt; {
+  metrics.record(body);
+};</template>
+      </code-block>
+    </code-pair>
+
+    <p>Third&#8209;party services are handed to every handler. Pass them once when the server
+    starts and they arrive in the second argument, alongside <code>ws</code> and
+    <code>room</code>.</p>
+
+    <code-block>
+      <code-head>
+        <code-where backend>BACKEND</code-where>
+        <code-path>index.js</code-path>
+      </code-head>
+      <template codie highlight-js>aaw('events', { mongo: db, stripe });</template>
+    </code-block>
+  </slide-inner>
+</slide>
+
+<slide id="errors">
+  <slide-inner>
+    <h2>Errors and timeouts</h2>
+    <p>A handler that throws rejects the caller's promise with
+    <code>{ error }</code>. There is no status code to map and no envelope to unwrap.</p>
+
+    <code-pair>
+      <code-block>
+        <code-head>
+          <code-where backend>BACKEND</code-where>
+          <code-path>events/user/login.js</code-path>
+        </code-head>
+        <template codie highlight-js>export default async ({ email }, { mongo }) =&gt; {
+  const user = await mongo.collection('users').findOne({ email });
+
+  if (!user) throw Error('No such account');
+
+  return user;
+};</template>
+      </code-block>
+
+      <code-block>
+        <code-head>
+          <code-where frontend>FRONTEND</code-where>
+          <code-path>app.js</code-path>
+        </code-head>
+        <template codie highlight-js>try {
+  const user = await ws.sendAsync('user/login', { email });
+} catch ({ error }) {
+  notify(error);
+}</template>
+      </code-block>
+    </code-pair>
+
+    <aaw-note><strong>sendAsync gives up after 3 seconds.</strong> The socket stays open and
+    the handler keeps running &mdash; only the caller stopped listening. Size the third
+    argument to the slowest call you expect.</aaw-note>
+
+    <code-block>
+      <code-head>
+        <code-where frontend>FRONTEND</code-where>
+        <code-path>app.js</code-path>
+      </code-head>
+      <template codie highlight-js>const image = await ws.sendAsync('image/generate', { prompt }, 30_000);</template>
+    </code-block>
+  </slide-inner>
+</slide>
+
+<slide id="push">
+  <slide-inner>
+    <h2>Push and multicast</h2>
+    <p>Handlers can talk back without being asked. <code>ws.broadcast</code> reaches every
+    connection; a <strong>room</strong> reaches a named subset, and membership clears itself
+    when a client disconnects.</p>
+
+    <code-pair>
+      <code-block>
+        <code-head>
+          <code-where backend>BACKEND</code-where>
+          <code-path>events/teamplay/join.js</code-path>
+        </code-head>
+        <template codie highlight-js>export default (body, { ws, room }) =&gt; {
+  room.join(`teamplay:${body.id}`);
+
+  room.emit(
+    `teamplay:${body.id}`,
+    'teamplay:joined',
+    { player: body.name },
+    ws
+  );
+};</template>
+      </code-block>
+
+      <code-block>
+        <code-head>
+          <code-where frontend>FRONTEND</code-where>
+          <code-path>app.js</code-path>
+        </code-head>
+        <template codie highlight-js>ws.sendSync('teamplay/join', { id, name });
+
+ws.on('teamplay:joined', ({ player }) =&gt; {
+  console.info(`${player} joined`);
+});
+
+ws.on('broadcast', (news) =&gt; console.info(news));</template>
+      </code-block>
+    </code-pair>
+
+    <p>The fourth argument to <code>room.emit</code> is a connection to skip &mdash; pass
+    <code>ws</code> so the sender does not hear its own message.</p>
+  </slide-inner>
+</slide>
+
+<slide id="auth">
+  <slide-inner>
+    <h2>Authentication, if you want it</h2>
+    <p>Off by default. Turn it on with a fifth argument and you get server&#8209;minted
+    sessions, a folder convention for who may call what, and a SQLite user store you never
+    have to configure.</p>
+
+    <code-block>
+      <code-head>
+        <code-where backend>BACKEND</code-where>
+        <code-path>index.js</code-path>
+      </code-head>
+      <template codie highlight-js>aaw('events', { mongo: db }, 1337, log, true);</template>
+    </code-block>
+
+    <p><strong>Events under <code>auth/</code> need a session. Everything else is open.</strong>
+    Where the file sits is the rule &mdash; there is no per&#8209;file flag and no policy list
+    to keep in sync.</p>
+
+    <tree-view>events/
+├── <b>health.js</b>             <i>anyone</i>
+├── teamplay/
+│   └── <b>list.js</b>           <i>anyone</i>
+└── auth/
+    ├── <b>chat.js</b>           <i>needs a session</i>
+    └── admin/
+        └── <b>seed.js</b>       <i>needs a session</i></tree-view>
+
+    <p>A protected handler never checks a token. It reads <code>identity</code>, because the
+    runtime refused the call otherwise.</p>
+
+    <code-block>
+      <code-head>
+        <code-where backend>BACKEND</code-where>
+        <code-path>events/auth/chat.js</code-path>
+      </code-head>
+      <template codie highlight-js>export default async ({ id, text }, { identity, room }) =&gt; {
+  room.emit(`teamplay:${id}`, 'chat', { from: identity.email, text });
+
+  return { ok: true };
+};</template>
+    </code-block>
+
+    <aaw-note>Leaving auth off does not open those events &mdash; it makes them unreachable,
+    and aaw lists them at boot. Forgetting to configure it can never be the thing that
+    exposes them.</aaw-note>
+  </slide-inner>
+</slide>
+
+<slide id="sessions">
+  <slide-inner>
+    <h2>Sessions on the client</h2>
+    <p>Connecting is free. A token is what buys the right to call anything under
+    <code>auth/</code>. aaw's own events live under <code>aaw/</code> and are called like any
+    other &mdash; there is no separate login API.</p>
+
+    <code-block>
+      <code-head>
+        <code-where frontend>FRONTEND</code-where>
+        <code-path>app.js</code-path>
+      </code-head>
+      <template codie highlight-js>const { token, user } = await ws.sendAsync('aaw/login', { email, password });
+
+await ws.sendAsync('auth/chat', { id, text });
+
+await ws.sendAsync('aaw/logout');</template>
+    </code-block>
+
+    <p>The session binds to the connection, so nothing carries a token in its body. Hand the
+    token back on the next page load and aaw restores the session before
+    <code>open</code> fires &mdash; so a first call made there cannot race a reconnect it
+    never saw.</p>
+
+    <code-block>
+      <code-head>
+        <code-where frontend>FRONTEND</code-where>
+        <code-path>app.js</code-path>
+      </code-head>
+      <template codie highlight-js>const ws = aaw('wss://api.example.com', { token: localStorage.token });
+
+ws.on('unauthorized', () =&gt; {
+  delete localStorage.token;
+  showLogin();
+});</template>
+    </code-block>
+
+    <table>
+      <tr><th>Event</th><th>Does</th></tr>
+      <tr><td>aaw/register</td><td>Create an account and bind a session</td></tr>
+      <tr><td>aaw/login</td><td>Bind a session to this connection</td></tr>
+      <tr><td>aaw/resume</td><td>Re&#8209;bind an existing token, which reconnects do for you</td></tr>
+      <tr><td>aaw/logout</td><td>End the session everywhere</td></tr>
+    </table>
+  </slide-inner>
+</slide>
+
+<slide id="reset">
+  <slide-inner>
+    <h2>Password reset</h2>
+    <p>aaw mints the token and verifies it. <strong>Delivering it is yours</strong> &mdash; a
+    transport library has no business holding your mail provider's credentials, so it hands
+    you the token and stays out of the way.</p>
+
+    <code-block>
+      <code-head>
+        <code-where backend>BACKEND</code-where>
+        <code-path>index.js</code-path>
+      </code-head>
+      <template codie highlight-js>aaw('events', {}, 1337, undefined, {
+  onReset: ({ user, token }) =&gt;
+    resend.emails.send({
+      to: user.email,
+      subject: 'Reset your password',
+      html: `&lt;a href="https://example.com/reset#${token}"&gt;Reset&lt;/a&gt;`
+    })
+});</template>
+    </code-block>
+
+    <code-pair>
+      <code-block>
+        <code-head>
+          <code-where frontend>FRONTEND</code-where>
+          <code-path>forgot-password.js</code-path>
+        </code-head>
+        <template codie highlight-js>await ws.sendAsync('aaw/password/request-reset', { email });</template>
+      </code-block>
+
+      <code-block>
+        <code-head>
+          <code-where frontend>FRONTEND</code-where>
+          <code-path>reset-password.js</code-path>
+        </code-head>
+        <template codie highlight-js>await ws.sendAsync('aaw/password/set-new', {
+  token: location.hash.slice(1),
+  password
+});</template>
+      </code-block>
+    </code-pair>
+
+    <p>The token is <code>crypto.randomUUID()</code>, single use, and expires &mdash; checked
+    where the password actually changes, not only on the page that renders the form. A reset
+    requested for an unknown address answers exactly like a known one, so the endpoint cannot
+    be used to discover who has an account. On success the caller is logged straight in.</p>
+  </slide-inner>
+</slide>
+
+<slide id="store">
+  <slide-inner>
+    <h2>When your users live elsewhere</h2>
+    <p>The SQLite store is a default, not a requirement. Pass <code>store</code> and aaw never
+    opens a database &mdash; useful when accounts already live in Mongo, or when a "user" is
+    an API key in a committed file.</p>
+
+    <code-block>
+      <code-head>
+        <code-where backend>BACKEND</code-where>
+        <code-path>index.js</code-path>
+      </code-head>
+      <template codie highlight-js>aaw('events', { mongo: db }, 1337, log, {
+  store: {
+    findUser: (email) =&gt; users.findOne({ email }),
+    verify: async (email, password) =&gt; {
+      const user = await users.findOne({ email });
+
+      return await Bun.password.verify(password, user?.password ?? '')
+        ? user
+        : null;
+    },
+    createSession: async (user, ttl) =&gt; {
+      const token = crypto.randomUUID();
+
+      await sessions.insertOne({ token, user, expires: Date.now() + ttl });
+
+      return token;
+    },
+    readSession: (token) =&gt;
+      sessions.findOne({ token, expires: { $gt: Date.now() } }),
+    endSession: (token) =&gt; sessions.deleteOne({ token })
+  }
+});</template>
+    </code-block>
+
+    <p>For credentials aaw knows nothing about &mdash; a licence key, a magic link, an SSO
+    assertion &mdash; write an ordinary public event and bind the session yourself.</p>
+
+    <code-block>
+      <code-head>
+        <code-where backend>BACKEND</code-where>
+        <code-path>events/redeem-licence.js</code-path>
+      </code-head>
+      <template codie highlight-js>export default async ({ licence }, { authenticate }) =&gt; {
+  const user = await lookupByLicence(licence);
+
+  if (!user) throw Error('Unknown licence');
+
+  return authenticate(user);
+};</template>
+    </code-block>
+  </slide-inner>
+</slide>
+
+</slides>
+</carousel>
+
+</body>
+</html>
