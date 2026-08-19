@@ -1,5 +1,3 @@
-export const provider = "sqlite";
-
 export default async ({ token, password }, { authenticate, auth: { store } }) => {
   if (!password) throw Error("A new password is required");
 

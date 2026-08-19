@@ -1,5 +1,3 @@
-export const provider = "sqlite";
-
 export default async ({ email }, { auth: { store, reset, onPasswordReset } }) => {
   if (!onPasswordReset)
     throw Error("Password reset is not configured (no onPasswordReset handler)");

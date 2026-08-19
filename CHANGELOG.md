@@ -12,7 +12,7 @@ All notable changes to this project are documented here. This project adheres to
   - **Server-minted sessions** bound to the connection. Identity is established once, not re-proven in every message body, and handlers receive it as `identity`.
   - **Built-in SQLite store** (`bun:sqlite`, no new dependency) holding users, linked providers, sessions and password resets. Passwords are hashed with `Bun.password` (Argon2id).
   - **`aaw/*` events** — `register`, `login`, `resume`, `logout`, `password/request-reset`, `password/set-new`. They live in the package's own `events/aaw/` folder as ordinary event files, named by their path exactly like yours, and registered alongside yours when auth is on. They sit outside `auth/` because a caller has to be able to log in before it holds anything to log in with. Reserved while auth is on; an event file that collides stops the server at boot instead of being silently shadowed.
-  - Each built-in event declares its provider (`export const provider = "sqlite"`), so naming a different provider leaves it unregistered rather than failing at call time.
+  - A built-in that needs a store method the configured store does not implement answers `Auth is not set up via aaw`, rather than exposing the missing internal call.
   - **Reset tokens** are `crypto.randomUUID()` with an expiry enforced where the password actually changes. `request-reset` answers identically for known and unknown addresses, so it cannot enumerate accounts.
   - **`allowed` globs** on an identity, matched against the event path (`*`, `auth/teamplay/*`, an exact path).
   - **Bring your own store** — pass `store` and aaw never opens a database. `authenticate(user)` in the handler context binds a session for credentials aaw knows nothing about.
