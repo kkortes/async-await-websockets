@@ -5,6 +5,7 @@ const SCHEMA = `
     id TEXT PRIMARY KEY,
     email TEXT UNIQUE,
     password TEXT,
+    allowed TEXT,
     created INTEGER NOT NULL,
     updated INTEGER NOT NULL
   );
@@ -27,7 +28,8 @@ const SCHEMA = `
   );
 `;
 
-const identity = (row) => row && { id: row.id, email: row.email };
+const identity = (row) =>
+  row && { id: row.id, email: row.email, ...(row.allowed && { allowed: JSON.parse(row.allowed) }) };
 
 export default (filename = "aaw-auth.sqlite") => {
   const db = new Database(filename, { create: true });
@@ -42,7 +44,7 @@ export default (filename = "aaw-auth.sqlite") => {
   const userById = db.query("SELECT * FROM users WHERE id = $id");
   const userByEmail = db.query("SELECT * FROM users WHERE email = $email");
   const insertUser = db.query(
-    "INSERT INTO users (id, email, password, created, updated) VALUES ($id, $email, $password, $created, $created)",
+    "INSERT INTO users (id, email, password, allowed, created, updated) VALUES ($id, $email, $password, $allowed, $created, $created)",
   );
   const updatePassword = db.query(
     "UPDATE users SET password = $password, updated = $updated WHERE id = $id",
@@ -73,13 +75,14 @@ export default (filename = "aaw-auth.sqlite") => {
   return {
     findUser: (email) => identity(userByEmail.get({ $email: email })),
 
-    createUser: async ({ email, password }) => {
+    createUser: async ({ email, password, allowed }) => {
       const id = crypto.randomUUID();
 
       insertUser.run({
         $id: id,
         $email: email,
         $password: password ? await Bun.password.hash(password) : null,
+        $allowed: allowed ? JSON.stringify(allowed) : null,
         $created: Date.now(),
       });
 
