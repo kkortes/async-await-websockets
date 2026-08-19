@@ -3,18 +3,18 @@ import sqlite from "./sqlite.js";
 const MINUTE = 60 * 1000;
 const DAY = 24 * 60 * MINUTE;
 
-// aaw's own events. Reserved while auth is enabled, and always reachable — a
-// caller has to be able to log in before it holds anything to log in with.
-const RESERVED = "auth/";
+// aaw's own events. Reserved while auth is enabled, and never gated — a caller
+// has to be able to log in before it holds anything to log in with, which is
+// also why they cannot live under auth/ themselves.
+const RESERVED = "aaw/";
 
-// The folder convention: events under public/ are open, everything else needs a
-// session. Enabling auth is a statement that this server has users, so the
-// surface is private unless a folder says otherwise.
-const PUBLIC = "public/";
+// The folder convention: events under auth/ require a session, everything else
+// is open.
+const PROTECTED = "auth/";
 
 export const reserved = (event) => event.startsWith(RESERVED);
 
-export const open = (event) => event.startsWith(PUBLIC) || reserved(event);
+export const guarded = (event) => event.startsWith(PROTECTED);
 
 // An identity may carry `allowed` globs, matched against the event path — the
 // same shape belt gives an API key, so "which identity" needs no second concept.
@@ -57,7 +57,7 @@ export default (config) => {
   };
 
   const events = {
-    "auth/register": async ({ email, password }, { ws }) => {
+    "aaw/register": async ({ email, password }, { ws }) => {
       requirePasswords();
 
       if (!email || !password) throw Error("Email and password are required");
@@ -66,7 +66,7 @@ export default (config) => {
       return bind(ws, await store.createUser({ email, password }));
     },
 
-    "auth/login": async ({ email, password }, { ws }) => {
+    "aaw/login": async ({ email, password }, { ws }) => {
       requirePasswords();
 
       const user = await store.verify(email, password);
@@ -78,7 +78,7 @@ export default (config) => {
 
     // What the client replays after an automatic reconnect, and what a browser
     // calls with the token an OAuth callback handed it.
-    "auth/resume": async ({ token }, { ws }) => {
+    "aaw/resume": async ({ token }, { ws }) => {
       const user = await store.readSession(token);
 
       if (!user) throw Error("Session expired");
@@ -89,7 +89,7 @@ export default (config) => {
       return { token, user };
     },
 
-    "auth/logout": async (_, { ws }) => {
+    "aaw/logout": async (_, { ws }) => {
       ws.token && (await store.endSession(ws.token));
 
       ws.identity = undefined;
@@ -100,7 +100,7 @@ export default (config) => {
 
     // The token is random and expires. Delivering it is the app's business, so
     // aaw hands it to `onReset` and stays out of the mail.
-    "auth/password/request-reset": async ({ email }) => {
+    "aaw/password/request-reset": async ({ email }) => {
       requirePasswords();
 
       const user = await store.findUser(email);
@@ -111,7 +111,7 @@ export default (config) => {
       return { ok: true };
     },
 
-    "auth/password/set-new": async ({ token, password }, { ws }) => {
+    "aaw/password/set-new": async ({ token, password }, { ws }) => {
       requirePasswords();
 
       if (!password) throw Error("A new password is required");
@@ -158,7 +158,7 @@ export default (config) => {
     },
 
     guard: (event, ws) => {
-      if (open(event)) return;
+      if (!guarded(event)) return;
       if (!ws.identity) return "Not authenticated";
       if (!permitted(ws.identity.allowed, event)) return `Not allowed: ${event}`;
     },

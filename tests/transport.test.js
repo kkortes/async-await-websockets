@@ -10,17 +10,18 @@ const connect = () => {
   return new Promise((resolve) => ws.addEventListener("open", () => resolve(ws)));
 };
 
+const rejection = (promise) => promise.then(() => null).catch(({ error }) => error);
+
 // Auth is opt-in: without it aaw stays the transport it has always been.
 beforeAll(async () => {
   process.chdir(import.meta.dir.replace(/\/tests$/, ""));
   await aaw("tests/events", {}, PORT);
 });
 
-test("every event stays reachable when auth is off", async () => {
+test("events outside auth/ stay reachable when auth is off", async () => {
   const ws = await connect();
 
-  expect(await ws.sendAsync("public/ping")).toEqual({ pong: true });
-  expect(await ws.sendAsync("admin/rebuild")).toEqual({ rebuilt: true });
+  expect(await ws.sendAsync("ping")).toEqual({ pong: true });
 
   ws.close();
 });
@@ -28,17 +29,29 @@ test("every event stays reachable when auth is off", async () => {
 test("handlers get no identity when auth is off", async () => {
   const ws = await connect();
 
-  expect(await ws.sendAsync("whoami")).toBeNull();
+  expect(await ws.sendAsync("context")).toEqual({ identity: null });
 
   ws.close();
 });
 
-test("auth/ is not reserved when auth is off", async () => {
+// Leaving auth off must never be the thing that exposes a protected event.
+test("auth/ events are unreachable rather than open when auth is off", async () => {
   const ws = await connect();
 
-  expect(await ws.sendAsync("auth/login", {}).catch(({ error }) => error)).toBe(
-    "Unknown event: auth/login",
+  expect(await rejection(ws.sendAsync("auth/whoami"))).toBe(
+    "Authentication is not enabled — auth/whoami is unreachable",
   );
+  expect(await rejection(ws.sendAsync("auth/admin/rebuild"))).toBe(
+    "Authentication is not enabled — auth/admin/rebuild is unreachable",
+  );
+
+  ws.close();
+});
+
+test("aaw/ is not reserved when auth is off", async () => {
+  const ws = await connect();
+
+  expect(await rejection(ws.sendAsync("aaw/login", {}))).toBe("Unknown event: aaw/login");
 
   ws.close();
 });

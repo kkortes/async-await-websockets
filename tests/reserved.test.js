@@ -6,7 +6,7 @@ beforeAll(() => process.chdir(import.meta.dir.replace(/\/tests$/, "")));
 
 test("an event file cannot shadow aaw's own auth events", async () => {
   expect(aaw("tests/reserved", {}, 1342, undefined, true)).rejects.toThrow(
-    '"auth/" is reserved by aaw\'s authentication — rename tests/reserved/auth/login.js',
+    '"aaw/" is reserved by aaw\'s authentication — rename tests/reserved/aaw/login.js',
   );
 });
 

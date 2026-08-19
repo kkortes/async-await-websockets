@@ -7,12 +7,13 @@ All notable changes to this project are documented here. This project adheres to
 ### Added
 
 - **Optional authentication** — off by default; aaw is unchanged unless you pass the new fifth `auth` argument.
-  - **Folder convention** — with auth on, events under `public/` are open and everything else requires a session. Where the file sits is the rule; there is no per-file flag and no central policy list.
+  - **Folder convention** — events under `auth/` require a session, everything else is open. Where the file sits is the rule; there is no per-file flag and no central policy list.
+  - **Turning auth off does not open `auth/` events** — they become unreachable, listed at boot and refused with `Authentication is not enabled — <event> is unreachable`. Leaving auth unconfigured can never be the thing that exposes a protected event.
   - **Server-minted sessions** bound to the connection. Identity is established once, not re-proven in every message body, and handlers receive it as `identity`.
   - **Built-in SQLite store** (`bun:sqlite`, no new dependency) holding users, linked providers, sessions and password resets. Passwords are hashed with `Bun.password` (Argon2id).
-  - **`auth/*` events** — `register`, `login`, `resume`, `logout`, `password/request-reset`, `password/set-new`. Reserved while auth is on; an event file that collides stops the server at boot instead of being silently shadowed.
+  - **`aaw/*` events** — `register`, `login`, `resume`, `logout`, `password/request-reset`, `password/set-new`. They sit outside `auth/` because a caller has to be able to log in before it holds anything to log in with. Reserved while auth is on; an event file that collides stops the server at boot instead of being silently shadowed.
   - **Reset tokens** are `crypto.randomUUID()` with an expiry enforced where the password actually changes. `request-reset` answers identically for known and unknown addresses, so it cannot enumerate accounts.
-  - **`allowed` globs** on an identity, matched against the event path (`*`, `teamplay/*`, an exact path).
+  - **`allowed` globs** on an identity, matched against the event path (`*`, `auth/teamplay/*`, an exact path).
   - **Bring your own store** — pass `store` and aaw never opens a database. `authenticate(user)` in the handler context binds a session for credentials aaw knows nothing about.
   - **Room for social providers** — provider registry, the `providers` link table, and an HTTP route pair (`/auth/<name>` and its callback) that mints a session and redirects back with the token. No OAuth provider ships yet.
 - The client remembers its token and replays it after an automatic reconnect, before `open` fires, so a first call made inside `open` cannot race a reconnect it never saw. An expired session emits `unauthorized` instead.

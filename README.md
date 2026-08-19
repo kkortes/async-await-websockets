@@ -109,32 +109,44 @@ aaw("events", { mongo }, 1337, log, true);
 
 ### The folder convention
 
-With auth enabled, **events under `public/` are open and everything else needs a session.**
-No per-file flag, no central policy list — where the file sits *is* the rule, the same way
-its path is already its name.
+**Events under `auth/` require a session; everything else is open.** No per-file flag, no
+central policy list — where the file sits *is* the rule, the same way its path is already
+its name.
 
 ```
-events/public/health.js     → "public/health"   anyone
-events/teamplay/chat.js     → "teamplay/chat"   needs a session
-events/admin/reseed.js      → "admin/reseed"    needs a session
+events/health.js            → "health"           anyone
+events/teamplay/list.js     → "teamplay/list"    anyone
+events/auth/chat.js         → "auth/chat"        needs a session
+events/auth/admin/seed.js   → "auth/admin/seed"  needs a session
 ```
 
-The default is deny because enabling auth is a statement that this server has users. A new
-event file is protected the moment you create it; forgetting to mark something public fails
-loudly, which is the direction worth failing in.
+Turning authentication **off does not open those events** — it makes them unreachable, and
+aaw says so at boot:
+
+```
+Authentication is off — 2 event(s) under auth/ are unreachable: [ "auth/chat", "auth/admin/seed" ]
+```
+
+A caller that tries anyway is told why, rather than being served:
+
+```
+Authentication is not enabled — auth/chat is unreachable
+```
+
+So forgetting to configure auth can never be the thing that exposes a protected event.
 
 ### Connecting
 
 The connection itself is free — anyone may open a socket. What a token buys is the right to
-call anything outside `public/`.
+call anything under `auth/`.
 
 ```js
 import aaw from "@ape-egg/async-await-websockets/client.js";
 
 const ws = aaw("wss://example.com");
 
-await ws.login({ email, password });      // or ws.login(credentials, "auth/register")
-await ws.sendAsync("teamplay/chat", { id, text });   // no token in the body
+await ws.login({ email, password });      // or ws.login(credentials, "aaw/register")
+await ws.sendAsync("auth/chat", { id, text });   // no token in the body
 await ws.logout();
 ```
 
@@ -160,18 +172,19 @@ ws.on("unauthorized", () => delete localStorage.token);
 
 ### Built-in events
 
-Reserved under `auth/` while authentication is on, and always reachable — a caller has to be
-able to log in before it holds anything to log in with. An event file of your own that
-collides with one of these stops the server at boot rather than being silently shadowed.
+aaw's own events live under `aaw/`, reserved while authentication is on. They cannot sit
+under `auth/` themselves — a caller has to be able to log in before it holds anything to log
+in with. An event file of your own that collides stops the server at boot rather than being
+silently shadowed.
 
 | Event | Does |
 |---|---|
-| `auth/register` | Create an account and bind a session |
-| `auth/login` | Bind a session to this connection |
-| `auth/resume` | Re-bind an existing token (what reconnects use) |
-| `auth/logout` | End the session everywhere |
-| `auth/password/request-reset` | Mint a reset token and hand it to `onReset` |
-| `auth/password/set-new` | Consume a reset token and set a new password |
+| `aaw/register` | Create an account and bind a session |
+| `aaw/login` | Bind a session to this connection |
+| `aaw/resume` | Re-bind an existing token (what reconnects use) |
+| `aaw/logout` | End the session everywhere |
+| `aaw/password/request-reset` | Mint a reset token and hand it to `onReset` |
+| `aaw/password/set-new` | Consume a reset token and set a new password |
 
 Reset tokens are `crypto.randomUUID()` with a real expiry, checked where the password
 actually changes. Delivering one is your app's business, so aaw hands it over and stays out
@@ -193,8 +206,8 @@ An identity may carry `allowed` — globs matched against the event path. Withou
 session may call any protected event.
 
 ```js
-{ allowed: ["teamplay/*"] }   // a player
-{ allowed: ["*"] }            // an admin
+{ allowed: ["auth/teamplay/*"] }   // a player
+{ allowed: ["*"] }                 // an admin
 ```
 
 ### Providers
@@ -221,6 +234,11 @@ a provider owns the handshake half, as two functions:
   callback: async (request) => ({ subject, email }),   // verified profile
 }
 ```
+
+It is served at `/auth/google` and `/auth/google/callback` — HTTP paths, unrelated to the
+`auth/` event folder. An address already registered here links to that account rather than
+colliding with it, which holds only because `callback` returns an address the provider
+verified.
 
 **No OAuth provider ships yet** — the store, the routes and the contract are in place so one
 can be added as a small module, and so social login does not need a schema change later.

@@ -32,18 +32,18 @@ afterAll(() => {
   });
 });
 
-test("public/ events are reachable without a session", async () => {
+test("events outside auth/ are reachable without a session", async () => {
   const ws = await connect();
 
-  expect(await ws.sendAsync("public/ping")).toEqual({ pong: true });
+  expect(await ws.sendAsync("ping")).toEqual({ pong: true });
 
   ws.close();
 });
 
-test("everything outside public/ is refused without a session", async () => {
+test("events under auth/ are refused without a session", async () => {
   const ws = await connect();
 
-  expect(await rejection(ws.sendAsync("whoami"))).toBe("Not authenticated");
+  expect(await rejection(ws.sendAsync("auth/whoami"))).toBe("Not authenticated");
 
   ws.close();
 });
@@ -52,13 +52,13 @@ test("register binds a session to the connection", async () => {
   const ws = await connect();
   const { token, user } = await ws.login(
     { email: "a@example.com", password: "hunter2" },
-    "auth/register",
+    "aaw/register",
   );
 
   expect(token).toMatch(/^[0-9a-f-]{36}$/);
   expect(user.email).toBe("a@example.com");
   expect(user.password).toBeUndefined();
-  expect((await ws.sendAsync("whoami")).email).toBe("a@example.com");
+  expect((await ws.sendAsync("auth/whoami")).email).toBe("a@example.com");
 
   ws.close();
 });
@@ -75,9 +75,9 @@ test("the token is minted by the server, not taken from the client's sid", async
 test("a wrong password is refused and leaves the connection anonymous", async () => {
   const ws = await connect();
 
-  expect(await rejection(ws.sendAsync("auth/login", { email: "a@example.com", password: "no" })))
+  expect(await rejection(ws.sendAsync("aaw/login", { email: "a@example.com", password: "no" })))
     .toBe("Invalid credentials");
-  expect(await rejection(ws.sendAsync("whoami"))).toBe("Not authenticated");
+  expect(await rejection(ws.sendAsync("auth/whoami"))).toBe("Not authenticated");
 
   ws.close();
 });
@@ -90,7 +90,7 @@ test("a session resumes on a brand new connection", async () => {
   const second = await connect();
   await second.authenticate(token);
 
-  expect((await second.sendAsync("whoami")).email).toBe("a@example.com");
+  expect((await second.sendAsync("auth/whoami")).email).toBe("a@example.com");
 
   second.close();
 });
@@ -101,7 +101,7 @@ test("logout ends the session for every future connection", async () => {
 
   await ws.logout();
 
-  expect(await rejection(ws.sendAsync("whoami"))).toBe("Not authenticated");
+  expect(await rejection(ws.sendAsync("auth/whoami"))).toBe("Not authenticated");
 
   const next = await connect();
 
@@ -117,8 +117,8 @@ test("two clients in one process keep their own session", async () => {
 
   await member.login({ email: "a@example.com", password: "hunter2" });
 
-  expect((await member.sendAsync("whoami")).email).toBe("a@example.com");
-  expect(await rejection(anonymous.sendAsync("whoami"))).toBe("Not authenticated");
+  expect((await member.sendAsync("auth/whoami")).email).toBe("a@example.com");
+  expect(await rejection(anonymous.sendAsync("auth/whoami"))).toBe("Not authenticated");
 
   anonymous.close();
   member.close();
@@ -127,15 +127,15 @@ test("two clients in one process keep their own session", async () => {
 test("a reset token is random, single use, and expires", async () => {
   const ws = await connect();
 
-  await ws.sendAsync("auth/password/request-reset", { email: "a@example.com" });
+  await ws.sendAsync("aaw/password/request-reset", { email: "a@example.com" });
 
   const token = globalThis.lastResetToken;
 
   expect(token).toMatch(/^[0-9a-f-]{36}$/);
 
-  await ws.sendAsync("auth/password/set-new", { token, password: "hunter3" });
+  await ws.sendAsync("aaw/password/set-new", { token, password: "hunter3" });
 
-  expect(await rejection(ws.sendAsync("auth/password/set-new", { token, password: "hunter4" })))
+  expect(await rejection(ws.sendAsync("aaw/password/set-new", { token, password: "hunter4" })))
     .toBe("Reset link is invalid or expired");
   expect((await ws.login({ email: "a@example.com", password: "hunter3" })).user.email)
     .toBe("a@example.com");
@@ -146,7 +146,7 @@ test("a reset token is random, single use, and expires", async () => {
 test("requesting a reset for an unknown email answers the same as a known one", async () => {
   const ws = await connect();
 
-  expect(await ws.sendAsync("auth/password/request-reset", { email: "nobody@example.com" }))
+  expect(await ws.sendAsync("aaw/password/request-reset", { email: "nobody@example.com" }))
     .toEqual({ ok: true });
 
   ws.close();
@@ -157,7 +157,7 @@ test("registering an email twice is refused", async () => {
 
   expect(
     await rejection(
-      ws.sendAsync("auth/register", { email: "a@example.com", password: "hunter2" }),
+      ws.sendAsync("aaw/register", { email: "a@example.com", password: "hunter2" }),
     ),
   ).toBe("Email already registered");
 

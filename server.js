@@ -2,7 +2,7 @@ import fs from "node:fs";
 import { normalize } from "node:path";
 import { pathToFileURL } from "node:url";
 
-import createAuth, { reserved } from "./auth/index.js";
+import createAuth, { guarded, reserved } from "./auth/index.js";
 
 const { serve } = Bun;
 
@@ -54,11 +54,21 @@ export default async (
 
     if (clash)
       throw new Error(
-        `"auth/" is reserved by aaw's authentication — rename ${eventDir}/${clash}.js`,
+        `"aaw/" is reserved by aaw's authentication — rename ${eventDir}/${clash}.js`,
       );
 
     Object.assign(endpoints, authentication.events);
   }
+
+  // Events under auth/ are unreachable rather than open when authentication is
+  // off, so leaving it off can never be the thing that exposes them.
+  const unreachable = authentication ? [] : Object.keys(endpoints).filter(guarded);
+
+  if (unreachable.length)
+    console.warn(
+      `Authentication is off — ${unreachable.length} event(s) under auth/ are unreachable:`,
+      unreachable,
+    );
 
   const clientPool = {};
 
@@ -129,7 +139,9 @@ export default async (
           return;
         }
 
-        const denied = authentication && authentication.guard(event, ws);
+        const denied = authentication
+          ? authentication.guard(event, ws)
+          : guarded(event) && `Authentication is not enabled — ${event} is unreachable`;
 
         if (denied) {
           ws.send(JSON.stringify([event, { error: denied }]));

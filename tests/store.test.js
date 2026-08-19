@@ -9,7 +9,7 @@ const PORT = 1341;
 // and what battleborn would pass to keep its users in mongo.
 const USERS = {
   "admin@example.com": { id: "1", email: "admin@example.com", allowed: ["*"] },
-  "bot@example.com": { id: "2", email: "bot@example.com", allowed: ["admin/*"] },
+  "bot@example.com": { id: "2", email: "bot@example.com", allowed: ["auth/admin/*"] },
 };
 
 const sessions = new Map();
@@ -42,7 +42,7 @@ test("a custom store authenticates without aaw's sqlite", async () => {
   const ws = await connect();
 
   expect((await ws.login({ email: "admin@example.com", password: "secret" })).user.id).toBe("1");
-  expect((await ws.sendAsync("whoami")).email).toBe("admin@example.com");
+  expect((await ws.sendAsync("auth/whoami")).email).toBe("admin@example.com");
 
   ws.close();
 });
@@ -52,8 +52,8 @@ test("`allowed` globs are matched against the event path", async () => {
 
   await ws.login({ email: "bot@example.com", password: "secret" });
 
-  expect(await ws.sendAsync("admin/rebuild")).toEqual({ rebuilt: true });
-  expect(await rejection(ws.sendAsync("whoami"))).toBe("Not allowed: whoami");
+  expect(await ws.sendAsync("auth/admin/rebuild")).toEqual({ rebuilt: true });
+  expect(await rejection(ws.sendAsync("auth/whoami"))).toBe("Not allowed: auth/whoami");
 
   ws.close();
 });
@@ -63,8 +63,8 @@ test("`*` allows everything", async () => {
 
   await ws.login({ email: "admin@example.com", password: "secret" });
 
-  expect(await ws.sendAsync("admin/rebuild")).toEqual({ rebuilt: true });
-  expect((await ws.sendAsync("whoami")).id).toBe("1");
+  expect(await ws.sendAsync("auth/admin/rebuild")).toEqual({ rebuilt: true });
+  expect((await ws.sendAsync("auth/whoami")).id).toBe("1");
 
   ws.close();
 });

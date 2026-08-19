@@ -41,19 +41,19 @@ const AsyncAwaitWebsocket = (
   // The session lives on the connection, and the token is what re-establishes it
   // after an automatic reconnect — so it is held here rather than by the caller.
   ws.authenticate = async (token) => {
-    const session = await ws.sendAsync("auth/resume", { token });
+    const session = await ws.sendAsync("aaw/resume", { token });
     state.token = session.token;
     return session;
   };
 
-  ws.login = async (credentials, event = "auth/login") => {
+  ws.login = async (credentials, event = "aaw/login") => {
     const session = await ws.sendAsync(event, credentials);
     state.token = session.token;
     return session;
   };
 
   ws.logout = async () => {
-    await ws.sendAsync("auth/logout");
+    await ws.sendAsync("aaw/logout");
     state.token = undefined;
   };
 
