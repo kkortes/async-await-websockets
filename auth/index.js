@@ -10,8 +10,6 @@ export const reserved = (event) => event.startsWith(RESERVED);
 
 export const guarded = (event) => event.startsWith(PROTECTED);
 
-export const prefixed = (event) => `${RESERVED}${event}`;
-
 const permitted = (allowed, event) =>
   !allowed ||
   allowed.some(

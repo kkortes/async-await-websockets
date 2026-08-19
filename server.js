@@ -2,7 +2,7 @@ import fs from "node:fs";
 import { normalize } from "node:path";
 import { pathToFileURL } from "node:url";
 
-import createAuth, { guarded, prefixed, reserved } from "./auth/index.js";
+import createAuth, { guarded, reserved } from "./auth/index.js";
 
 const { serve } = Bun;
 
@@ -59,11 +59,11 @@ export default async (
         `"aaw/" is reserved by aaw's authentication — rename ${eventDir}/${clash}.js`,
       );
 
-    const builtIn = await serveEndpoints(`${import.meta.dir}/aaw-events`, "");
+    const builtIn = await serveEndpoints(`${import.meta.dir}/events`, "");
 
     Object.entries(handlers(builtIn))
       .filter(([event]) => authentication.supports(builtIn[event]))
-      .forEach(([event, fn]) => (endpoints[prefixed(event)] = fn));
+      .forEach(([event, fn]) => (endpoints[event] = fn));
   }
 
   const unreachable = authentication ? [] : Object.keys(endpoints).filter(guarded);

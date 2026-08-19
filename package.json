@@ -14,7 +14,7 @@
     "server.js",
     "client.js",
     "auth",
-    "aaw-events",
+    "events",
     "index.d.ts",
     "README.md",
     "CHANGELOG.md"

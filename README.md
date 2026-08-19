@@ -175,15 +175,15 @@ ws.on("unauthorized", () => delete localStorage.token);
 
 ### Built-in events
 
-aaw's own events live in the package's `aaw-events/` folder, one file per event, and are
-registered under `aaw/` alongside yours when authentication is on. They cannot sit under
+aaw's own events live in the package's own `events/aaw/` folder, one file per event, named by
+their path exactly like yours, and registered alongside yours when authentication is on. They cannot sit under
 `auth/` themselves — a caller has to be able to log in before it holds anything to log in
 with. An event file of your own that collides stops the server at boot rather than being
 silently shadowed.
 
 ```
-aaw-events/login.js                   → "aaw/login"
-aaw-events/password/request-reset.js  → "aaw/password/request-reset"
+events/aaw/login.js                   → "aaw/login"
+events/aaw/password/request-reset.js  → "aaw/password/request-reset"
 ```
 
 They are ordinary event files. Each declares the provider it belongs to, so naming a
