@@ -127,7 +127,14 @@ export default async (
     },
     websocket: {
       message: (ws, msg) => {
-        const [event, body] = JSON.parse(msg.toString());
+        let event, body;
+
+        try {
+          [event, body] = JSON.parse(msg.toString());
+        } catch {
+          return;
+        }
+
         const func = Object.hasOwn(endpoints, event) && endpoints[event];
 
         if (!func) {
