@@ -153,24 +153,18 @@ export default async (
           size: (name) => rooms[name]?.size || 0,
         };
 
-        const resolution = func(body || {}, {
-          ws,
-          room,
-          ...services,
-          ...(authentication && authentication.context(ws)),
-        });
-
         (async () => {
-          try {
-            const res = await resolution;
-          } catch (_) {}
+          const async = func.constructor.name === "AsyncFunction";
 
-          let result,
-            error,
-            async = func.constructor.name === "AsyncFunction";
+          let result, error;
 
           try {
-            result = async ? await resolution : resolution;
+            result = await func(body || {}, {
+              ws,
+              room,
+              ...services,
+              ...(authentication && authentication.context(ws)),
+            });
           } catch (err) {
             error = err.message || String(err);
           }
