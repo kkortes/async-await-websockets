@@ -59,9 +59,7 @@ export default async (
   if (authentication) {
     const builtIn = await serveEndpoints(`${import.meta.dir}/events`, "");
 
-    Object.entries(handlers(builtIn))
-      .filter(([event]) => authentication.supports(builtIn[event]))
-      .forEach(([event, fn]) => (endpoints[event] = fn));
+    Object.entries(handlers(builtIn)).forEach(([event, fn]) => (endpoints[event] = fn));
   }
 
   const unreachable = authentication ? [] : Object.keys(endpoints).filter(guarded);
@@ -137,7 +135,7 @@ export default async (
           return;
         }
 
-        const func = endpoints?.[event];
+        const func = Object.hasOwn(endpoints, event) && endpoints[event];
 
         if (!func) {
           const error = `Unknown event: ${event}`;
@@ -181,7 +179,7 @@ export default async (
           try {
             result = async ? await resolution : resolution;
           } catch (err) {
-            error = err.message ?? String(err);
+            error = err.message || String(err);
           }
 
           async && ws.send(JSON.stringify([event, error ? { error } : result]));

@@ -12,7 +12,7 @@ All notable changes to this project are documented here. This project adheres to
   - **Server-minted sessions** bound to the connection. Identity is established once, not re-proven in every message body, and handlers receive it as `identity`.
   - **Built-in SQLite store** (`bun:sqlite`, no new dependency) holding users, linked providers, sessions and password resets. Passwords are hashed with `Bun.password` (Argon2id).
   - **`aaw/*` events** — `register`, `login`, `resume`, `logout`, `password/request-reset`, `password/set-new`. They live in the package's own `events/aaw/` folder as ordinary event files, named by their path exactly like yours, and registered alongside yours when auth is on. They sit outside `auth/` because a caller has to be able to log in before it holds anything to log in with. Reserved while auth is on; an event file that collides stops the server at boot instead of being silently shadowed.
-  - Each built-in event declares its provider (`export const provider = "sqlite"`), so naming a different provider leaves it unregistered rather than failing at call time.
+  - A built-in that needs a store method the configured store does not implement answers `Auth is not set up via aaw`, rather than exposing the missing internal call.
   - **Reset tokens** are `crypto.randomUUID()` with an expiry enforced where the password actually changes. `request-reset` answers identically for known and unknown addresses, so it cannot enumerate accounts.
   - **`allowed` globs** on an identity, matched against the event path (`*`, `auth/teamplay/*`, an exact path).
   - **Bring your own store** — pass `store` and aaw never opens a database. `authenticate(user)` in the handler context binds a session for credentials aaw knows nothing about.
@@ -27,6 +27,7 @@ All notable changes to this project are documented here. This project adheres to
 
 ### Changed
 
+- **Breaking:** `auth/` is now a reserved namespace. An event under an `auth/` folder requires a session, and with auth off it is unreachable rather than public (refused with `Authentication is not enabled — <event> is unreachable`). An existing app that already used an `events/auth/` folder for something else — an OAuth callback, a webhook — must move those events out of `auth/` or turn auth on. The events are listed at boot so the break is visible before a caller hits it.
 - **Breaking:** a thrown handler error now sends `err.message` rather than `err.toString()`. The payload field is already named `error`, so the old shape prefixed every message with `"Error: "` — visible to end users wherever the string is displayed directly. Consumers that stripped the prefix should stop; consumers that displayed it raw get a cleaner message for free.
 
 ## [3.1.0]
