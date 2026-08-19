@@ -60,6 +60,7 @@ export default (filename = "aaw-auth.sqlite") => {
     "SELECT users.* FROM users JOIN sessions ON sessions.user_id = users.id WHERE sessions.token = $token AND sessions.expires > $now",
   );
   const deleteSession = db.query("DELETE FROM sessions WHERE token = $token");
+  const deleteSessionsFor = db.query("DELETE FROM sessions WHERE user_id = $user_id");
   const expireSessions = db.query("DELETE FROM sessions WHERE expires <= $now");
   const insertReset = db.query(
     "INSERT INTO resets (token, user_id, expires) VALUES ($token, $user_id, $expires)",
@@ -133,6 +134,7 @@ export default (filename = "aaw-auth.sqlite") => {
       if (!row) return null;
 
       deleteReset.run({ $token: token });
+      deleteSessionsFor.run({ $user_id: row.user_id });
       updatePassword.run({
         $id: row.user_id,
         $password: await Bun.password.hash(password),

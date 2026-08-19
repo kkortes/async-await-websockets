@@ -128,7 +128,7 @@ export default async (
       );
     },
     websocket: {
-      message: (ws, msg) => {
+      message: async (ws, msg) => {
         const [event, body] = JSON.parse(msg.toString());
         const func = endpoints?.[event];
 
@@ -140,7 +140,7 @@ export default async (
         }
 
         const denied = authentication
-          ? authentication.guard(event, ws)
+          ? await authentication.guard(event, ws)
           : guarded(event) && `Authentication is not enabled — ${event} is unreachable`;
 
         if (denied) {

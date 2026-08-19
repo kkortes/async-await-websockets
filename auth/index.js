@@ -90,10 +90,14 @@ export default (config) => {
       return pathname.endsWith("/callback") ? link(provider, request) : provider.start(request);
     },
 
-    guard: (event, ws) => {
+    guard: async (event, ws) => {
       if (!guarded(event)) return;
-      if (!ws.identity) return "Not authenticated";
-      if (!permitted(ws.identity.allowed, event)) return `Not allowed: ${event}`;
+
+      const identity = ws.token && (await store.readSession(ws.token));
+      if (!identity) return "Not authenticated";
+
+      ws.identity = identity;
+      if (!permitted(identity.allowed, event)) return `Not allowed: ${event}`;
     },
 
     context: (ws) => ({
