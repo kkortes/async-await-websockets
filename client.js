@@ -23,8 +23,9 @@ const AsyncAwaitWebsocket = (
 
   const ws = new WebSocket(url, generateID());
   ws.sid = ws.protocol;
+  state.socket = ws;
 
-  ws.sendSync = (event, data) => ws.send(JSON.stringify([event, data]));
+  ws.sendSync = (event, data) => state.socket.send(JSON.stringify([event, data]));
 
   ws.sendAsync = (event, data, timeout = 3000) =>
     new Promise((resolve, reject) => {
@@ -39,7 +40,7 @@ const AsyncAwaitWebsocket = (
         reject({ error: "WebSocket error (client): request timed out" });
       }, timeout);
 
-      ws.send(JSON.stringify([event, data]));
+      state.socket.send(JSON.stringify([event, data]));
       eventTarget.addEventListener(event, trigger);
     });
 
