@@ -1,7 +1,6 @@
 export type Identity = {
   id: string;
   email?: string;
-  allowed?: string[];
 };
 
 export type Session = { token: string; user: Identity };

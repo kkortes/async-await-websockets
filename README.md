@@ -238,16 +238,6 @@ answers with an error rather than a success nobody can act on.
 cannot be used to enumerate accounts. Passwords are hashed with `Bun.password` (Argon2id),
 which is what makes a guessed password cost the attacker real CPU on every attempt.
 
-### Permissions
-
-An identity may carry `allowed` — globs matched against the event path. Without it, any
-session may call any protected event.
-
-```js
-{ allowed: ["auth/teamplay/*"] }   // a player
-{ allowed: ["*"] }                 // an admin
-```
-
 ### Providers
 
 `providers` defaults to `["sqlite"]`, aaw's built-in store. Naming any other provider turns

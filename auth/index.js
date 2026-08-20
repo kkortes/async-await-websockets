@@ -10,15 +10,6 @@ export const reserved = (event) => event.startsWith(RESERVED);
 
 export const guarded = (event) => event.startsWith(PROTECTED);
 
-const permitted = (allowed, event) =>
-  !allowed ||
-  allowed.some(
-    (pattern) =>
-      pattern === "*" ||
-      pattern === event ||
-      (pattern.endsWith("/*") && event.startsWith(pattern.slice(0, -1))),
-  );
-
 const named = (provider) => (typeof provider === "string" ? { name: provider } : provider);
 
 export default (config) => {
@@ -95,7 +86,6 @@ export default (config) => {
     guard: (event, ws) => {
       if (!guarded(event)) return;
       if (!ws.identity) return "Not authenticated";
-      if (!permitted(ws.identity.allowed, event)) return `Not allowed: ${event}`;
     },
 
     context: (ws) => ({
