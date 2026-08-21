@@ -2,6 +2,29 @@
 
 All notable changes to this project are documented here. This project adheres to [Semantic Versioning](https://semver.org/).
 
+## [3.3.0]
+
+### Added
+
+- **A documentation one-pager** (`index.html`, published at [aaw.korte.kim](https://aaw.korte.kim)) covering the transport, rooms and authentication. It is not part of the npm tarball.
+
+### Changed
+
+- **A refused `sendAsync` now rejects with an `Error`.** Both rejection paths — the server's error reply and the client-side timeout — previously threw a bare object, which prints as `#<Object>` in a browser console or a log: no message, no stack, nothing to act on. Every field the server sent is copied onto the error, so consumers reading `refusal.error` are unaffected and `.message` and `.stack` now work as expected.
+- **The publish script is now `bun run release`.** npm re-runs a script named `publish` as a lifecycle hook after `npm publish` succeeds, so the old name published the package a second time and failed the run on the duplicate version.
+
+## [3.2.1]
+
+### Fixed
+
+- **A throwing synchronous handler no longer kills the server.** The handler was invoked outside the try/catch, so an ordinary validation guard such as `if (!body.id) throw Error(...)` escaped Bun's message callback and terminated the process — any client sending an incomplete body could stop the server.
+- **A malformed frame no longer kills the server.** `JSON.parse` and the destructuring ran outside any try, so a frame that was not valid JSON, or valid JSON that was not an `[event, body]` pair, terminated the process. Such a frame carries no event to answer, so it is dropped.
+- **A prototype-chain event name is an unknown event, not a crash.** Looking the event up with `endpoints?.[event]` matched inherited members, so an event named `constructor` or `toString` resolved to a function that was never a handler; the lookup is now an own-property check.
+- **Sends follow the live socket across a reconnect.** `sendSync` and `sendAsync` captured the socket they were created with, so calls made after an automatic reconnect went to the dead one.
+- **An error with an empty message still rejects the caller.** `err.message ?? String(err)` left an empty string for `throw Error()`, which read as falsy at the send site and shipped the failure as a successful `null`.
+- **A failed resume clears the socket's identity**, rather than leaving the previous identity bound to the connection.
+- **A built-in that needs a store method the configured store does not implement** answers `Auth is not set up via aaw` instead of exposing the missing internal call.
+
 ## [3.2.0]
 
 ### Added

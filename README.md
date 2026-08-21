@@ -386,6 +386,6 @@ In both cases `sendAsync` will throw an object that contains an error-message li
 ## Publishing
 
 - `bun run publish:check` — dry-run `npm pack` to preview the published tarball.
-- `bun run publish` — runs the check, prompts for a new version (or keeps the current one), and publishes `@ape-egg/async-await-websockets` to npm.
+- `bun run release` — runs the check, prompts for a new version (or keeps the current one), and publishes `@ape-egg/async-await-websockets` to npm.
 
-Use `bun run publish` (not `bun publish`, which is Bun's own built-in publisher and skips the script). Requires being logged in to npm (`npm login`).
+Requires being logged in to npm (`npm login`). The script is named `release` rather than `publish` because npm runs a script called `publish` again as a lifecycle hook once `npm publish` succeeds, which republishes the same version and fails on the second attempt.
