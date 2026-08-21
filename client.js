@@ -13,6 +13,8 @@ const generateID = () =>
     Math.round(performance.now()).toString(36)
   }`;
 
+const refusal = (detail) => Object.assign(new Error(detail.error), detail);
+
 const AsyncAwaitWebsocket = (
   url,
   options = {},
@@ -32,12 +34,12 @@ const AsyncAwaitWebsocket = (
       const trigger = ({ detail }) => {
         clearTimeout(id);
         eventTarget.removeEventListener(event, trigger);
-        detail?.error ? reject(detail) : resolve(detail);
+        detail?.error ? reject(refusal(detail)) : resolve(detail);
       };
 
       const id = setTimeout(() => {
         eventTarget.removeEventListener(event, trigger);
-        reject({ error: "WebSocket error (client): request timed out" });
+        reject(refusal({ error: "WebSocket error (client): request timed out" }));
       }, timeout);
 
       state.socket.send(JSON.stringify([event, data]));
