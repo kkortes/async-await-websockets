@@ -48,7 +48,7 @@ Your server should now be reachable on ws://localhost:1337
 
 ## Configuration
 
-`aaw(eventDir, services, port, log, auth)`
+`aaw(eventDir, services, port, log, auth, maxPayloadLength)`
 
 ### eventDir (string)
 
@@ -80,6 +80,17 @@ Optional authentication. `false` (the default) leaves aaw a pure transport; `tru
 with the built-in SQLite store. See [Authentication](#authentication).
 
 Default: `false`
+
+### maxPayloadLength (integer)
+
+The largest inbound websocket frame the server accepts, in bytes. A frame over the limit
+never reaches a handler — Bun closes the connection (1006, *Received too big message*), which
+a client experiences as a dead socket and a reconnect loop if it retries the same send. The
+server names the closed frame and the configured limit on `console.error`, so the failure is
+loud where it can be seen. Raise the limit when your events carry large payloads; remember
+base64 is a third larger than the bytes it encodes.
+
+Default: `16777216` (16 MiB, Bun's own default)
 
 ## Your server
 
