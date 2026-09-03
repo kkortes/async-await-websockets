@@ -2,6 +2,12 @@
 
 All notable changes to this project are documented here. This project adheres to [Semantic Versioning](https://semver.org/).
 
+## [3.4.0]
+
+### Added
+
+- **`maxPayloadLength`** — a sixth server argument setting the largest inbound frame Bun accepts, in bytes. Bun's 16 MiB default silently applied before; a frame over it never reaches a handler — Bun closes the connection (1006, *Received too big message*), which a client experiences as a dead socket and, if it retries the same send, a reconnect loop. The default is unchanged (16 MiB, now explicit); pass a higher value when your events carry large payloads, such as base64-encoded images.
+
 ## [3.3.0]
 
 ### Added

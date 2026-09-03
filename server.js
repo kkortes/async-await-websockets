@@ -44,6 +44,7 @@ export default async (
   port = 1337,
   log = undefined,
   auth = false,
+  maxPayloadLength = 16 * 1024 * 1024,
 ) => {
   if (!eventDir) throw new Error("`eventDir` must be set");
 
@@ -126,6 +127,7 @@ export default async (
       );
     },
     websocket: {
+      maxPayloadLength,
       message: (ws, msg) => {
         let event, body;
 
