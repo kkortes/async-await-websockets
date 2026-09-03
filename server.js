@@ -203,6 +203,11 @@ export default async (
           broadcast(body, includeSelf || ws);
       },
       close: (ws, code, message) => {
+        if (String(message).includes("too big"))
+          console.error(
+            `Frame over maxPayloadLength (${maxPayloadLength} bytes) — the connection was closed (${code}) before any handler ran. Pass a higher sixth argument to aaw() if the payload is legitimate.`,
+          );
+
         delete clientPool[ws.data];
         leaveAllRooms(ws);
       },
