@@ -48,7 +48,7 @@ Your server should now be reachable on ws://localhost:1337
 
 ## Configuration
 
-`aaw(eventDir, services, port, log, auth, maxPayloadLength)`
+`aaw(eventDir, services, port, log, auth, maxPayloadLength, tls)`
 
 ### eventDir (string)
 
@@ -91,6 +91,21 @@ loud where it can be seen. Raise the limit when your events carry large payloads
 base64 is a third larger than the bytes it encodes.
 
 Default: `16777216` (16 MiB, Bun's own default)
+
+### tls (object)
+
+Passed as-is to `Bun.serve`'s `tls` option (https://bun.sh/docs/api/http#tls), so the server
+speaks `wss://` instead of `ws://`. An `https://` page can only open a secure socket — browsers
+block `ws://` from it as mixed content.
+
+```js
+aaw("events", {}, 443, undefined, false, undefined, {
+  cert: Bun.file("./cert.pem"),
+  key: Bun.file("./key.pem"),
+});
+```
+
+Default: `undefined` (plain `ws://`)
 
 ## Your server
 

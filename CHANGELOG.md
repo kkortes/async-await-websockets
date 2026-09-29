@@ -2,6 +2,12 @@
 
 All notable changes to this project are documented here. This project adheres to [Semantic Versioning](https://semver.org/).
 
+## [3.5.0]
+
+### Added
+
+- **`tls`** — a seventh server argument passed straight to `Bun.serve`'s `tls` option, so the server speaks `wss://`. A page served over `https://` cannot open a `ws://` socket (mixed content), which until now left aaw unreachable from any secure origin. Omitted, the server is plain `ws://` as before.
+
 ## [3.4.0]
 
 ### Added
