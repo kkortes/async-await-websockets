@@ -45,6 +45,7 @@ export default async (
   log = undefined,
   auth = false,
   maxPayloadLength = 16 * 1024 * 1024,
+  tls = undefined,
 ) => {
   if (!eventDir) throw new Error("`eventDir` must be set");
 
@@ -112,6 +113,7 @@ export default async (
 
   const server = serve({
     port,
+    tls,
     fetch: (req, server) => {
       // A hack: use sec-websocket-protocol as the socket id (named `data` in Bun)
       if (
@@ -215,7 +217,7 @@ export default async (
     },
   });
 
-  console.info(`Server started on port ${port}`);
+  console.info(`Server started on port ${port}${tls ? " over TLS" : ""}`);
 
   return server;
 };
