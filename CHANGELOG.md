@@ -2,6 +2,12 @@
 
 All notable changes to this project are documented here. This project adheres to [Semantic Versioning](https://semver.org/).
 
+## [3.6.0]
+
+### Added
+
+- **`routes`** — an eighth server argument passed straight to `Bun.serve`'s `routes` option, so HTTP endpoints and websockets share one port. aaw has called `Bun.serve` itself since it moved to Bun, which left an app needing HTTP as well a second server on a second port — and hosts such as Render route only one. A request matching a route gets its response, everything else, the websocket upgrade among them, reaches aaw as before. Omitted, the server serves websockets only, as before.
+
 ## [3.5.0]
 
 ### Added
