@@ -48,7 +48,7 @@ Your server should now be reachable on ws://localhost:1337
 
 ## Configuration
 
-`aaw(eventDir, services, port, log, auth, maxPayloadLength, tls)`
+`aaw(eventDir, services, port, log, auth, maxPayloadLength, tls, routes)`
 
 ### eventDir (string)
 
@@ -106,6 +106,22 @@ aaw("events", {}, 443, undefined, false, undefined, {
 ```
 
 Default: `undefined` (plain `ws://`)
+
+### routes (object)
+
+Passed as-is to `Bun.serve`'s `routes` option (https://bun.sh/docs/api/http#routing), so HTTP
+and websockets share one port. Hosts such as Render route a single public port to a service,
+so an app with HTTP endpoints of its own serves them here instead of on a second server. A
+request that matches a route gets its response; every other request, the websocket upgrade
+among them, reaches aaw.
+
+```js
+aaw("events", {}, Bun.env.PORT, undefined, false, undefined, undefined, {
+  "/health": () => new Response("ok"),
+});
+```
+
+Default: `undefined` (websockets only)
 
 ## Your server
 
