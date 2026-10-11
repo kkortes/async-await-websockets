@@ -180,7 +180,7 @@ export default async (
           let result, error;
 
           try {
-            result = await func(body || {}, {
+            result = await func(body ?? {}, {
               ws,
               room,
               ...services,
@@ -199,7 +199,7 @@ export default async (
                 websocketKey: ws.data,
                 identity: ws.identity,
                 async,
-                body: body || {},
+                body: body ?? {},
                 result,
                 error,
               },

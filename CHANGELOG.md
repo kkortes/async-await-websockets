@@ -2,6 +2,12 @@
 
 All notable changes to this project are documented here. This project adheres to [Semantic Versioning](https://semver.org/).
 
+## [3.7.1]
+
+### Fixed
+
+- **A falsy body reaches its handler as sent.** The server handed a handler `body || {}`, so `0`, `false` and `''` arrived as `{}`, an object that equals nothing. A client sending the number `0` could never be told apart from one sending nothing. Only a missing body (`undefined` or `null`) defaults to `{}` now, in the handler's call and in `log` alike.
+
 ## [3.7.0]
 
 ### Added
