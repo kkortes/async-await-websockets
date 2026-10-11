@@ -2,6 +2,12 @@
 
 All notable changes to this project are documented here. This project adheres to [Semantic Versioning](https://semver.org/).
 
+## [3.7.0]
+
+### Added
+
+- **`on`**: a ninth server argument with optional hooks, `open(ws)`, `close(ws, code, reason)`, `receive(ws, event, body)` and `send(ws, event, data)`. An app could not see a socket connect or close, and `log` only reports frames that reached a handler, by websocket key, after the handler ran, so a monitor or a network log of a connection had nothing to hang on. Every frame the server sends now goes through one path, so `send` sees `sendEvent`, async replies, errors, `broadcast` and room `emit` alike. Omitted, nothing changes.
+
 ## [3.6.0]
 
 ### Added

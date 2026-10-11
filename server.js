@@ -47,6 +47,7 @@ export default async (
   maxPayloadLength = 16 * 1024 * 1024,
   tls = undefined,
   routes = undefined,
+  on = {},
 ) => {
   if (!eventDir) throw new Error("`eventDir` must be set");
 
@@ -75,10 +76,15 @@ export default async (
 
   const clientPool = {};
 
+  // Every frame the server sends goes through here, so `on.send` sees all of them.
+  const send = (ws, event, data) => {
+    on.send?.(ws, event, data);
+    ws.send(JSON.stringify([event, data]));
+  };
+
   const broadcast = (body, ws = undefined) =>
     Object.values(clientPool).forEach(
-      (client) =>
-        ws !== client && client.send(JSON.stringify(["broadcast", body])),
+      (client) => ws !== client && send(client, "broadcast", body),
     );
 
   // Rooms: targeted multicast to a named subset of connections. Membership is
@@ -106,7 +112,7 @@ export default async (
     let sent = 0;
     for (const client of members)
       if (client !== except) {
-        client.send(JSON.stringify([event, data]));
+        send(client, event, data);
         sent += 1;
       }
     return sent;
@@ -141,12 +147,14 @@ export default async (
           return;
         }
 
+        on.receive?.(ws, event, body);
+
         const func = Object.hasOwn(endpoints, event) && endpoints[event];
 
         if (!func) {
           const error = `Unknown event: ${event}`;
           console.error(error, "— registered:", Object.keys(endpoints));
-          ws.send(JSON.stringify([event, { error }]));
+          send(ws, event, { error });
           return;
         }
 
@@ -155,7 +163,7 @@ export default async (
           : guarded(event) && `Authentication is not enabled — ${event} is unreachable`;
 
         if (denied) {
-          ws.send(JSON.stringify([event, { error: denied }]));
+          send(ws, event, { error: denied });
           return;
         }
 
@@ -182,7 +190,7 @@ export default async (
             error = err.message || String(err);
           }
 
-          async && ws.send(JSON.stringify([event, error ? { error } : result]));
+          async && send(ws, event, error ? { error } : result);
 
           typeof log === "function" &&
             log(
@@ -202,9 +210,11 @@ export default async (
       open: (ws) => {
         clientPool[ws.data] = ws;
 
-        ws.sendEvent = (event, data) => ws.send(JSON.stringify([event, data]));
+        ws.sendEvent = (event, data) => send(ws, event, data);
         ws.broadcast = (body, includeSelf = false) =>
           broadcast(body, includeSelf || ws);
+
+        on.open?.(ws);
       },
       close: (ws, code, message) => {
         if (String(message).includes("too big"))
@@ -214,6 +224,8 @@ export default async (
 
         delete clientPool[ws.data];
         leaveAllRooms(ws);
+
+        on.close?.(ws, code, message);
       },
       drain: (ws) => {},
     },
