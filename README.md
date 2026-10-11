@@ -48,7 +48,7 @@ Your server should now be reachable on ws://localhost:1337
 
 ## Configuration
 
-`aaw(eventDir, services, port, log, auth, maxPayloadLength, tls, routes)`
+`aaw(eventDir, services, port, log, auth, maxPayloadLength, tls, routes, on)`
 
 ### eventDir (string)
 
@@ -122,6 +122,27 @@ aaw("events", {}, Bun.env.PORT, undefined, false, undefined, undefined, {
 ```
 
 Default: `undefined` (websockets only)
+
+### on (object)
+
+Hooks into every connection and every frame, for monitors and network logs. Each one is
+optional and gets the socket it concerns:
+
+- `open(ws)` — a socket connected. `ws.sendEvent` is ready, so the hook can send.
+- `close(ws, code, reason)` — a socket closed, after it left its rooms.
+- `receive(ws, event, body)` — a frame arrived, before its handler runs. Unknown events
+  arrive too.
+- `send(ws, event, data)` — the server sends a frame: `sendEvent`, an async handler's
+  reply, an error, `broadcast` and room `emit` alike.
+
+```js
+aaw("events", {}, 1337, undefined, false, undefined, undefined, undefined, {
+  open: (ws) => console.info("connected", ws.data),
+  close: (ws) => console.info("disconnected", ws.data),
+});
+```
+
+Default: `{}` (no hooks)
 
 ## Your server
 
