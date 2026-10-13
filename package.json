@@ -7,8 +7,8 @@
   "module": "client.js",
   "type": "module",
   "scripts": {
-    "publish:check": "npm pack --dry-run",
-    "release": "bun publish:check && ./scripts/publish.sh"
+    "publish:async-await-websockets:check": "npm pack --dry-run",
+    "publish:async-await-websockets": "bun publish:async-await-websockets:check && ./scripts/publish-async-await-websockets.sh"
   },
   "files": [
     "server.js",
