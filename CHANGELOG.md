@@ -2,6 +2,12 @@
 
 All notable changes to this project are documented here. This project adheres to [Semantic Versioning](https://semver.org/).
 
+## [3.8.0]
+
+### Fixed
+
+- **Concurrent `sendAsync` calls of one event each get their own reply.** The client matched a reply to its call by event name alone, so when two calls of the same event were in flight the first reply resolved both and the second reply reached nobody. Each call now sends a call id as a third element, `[event, payload, id]`, and the server echoes it on the reply, its errors included. An older server, which sends no id, still answers the oldest pending call of that event; an older client ignores the id. Replies are still dispatched as events, so `ws.on` listeners see them as before.
+
 ## [3.7.1]
 
 ### Fixed

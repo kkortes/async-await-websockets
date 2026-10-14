@@ -18,7 +18,7 @@ const refusal = (detail) => Object.assign(new Error(detail.error), detail);
 const AsyncAwaitWebsocket = (
   url,
   options = {},
-  state = { eventTarget: new EventTarget(), token: options.token },
+  state = { eventTarget: new EventTarget(), token: options.token, pending: new Map(), calls: 0 },
 ) => {
   const { eventTarget } = state;
   const { reconnectInterval = 1000 } = options;
@@ -31,19 +31,23 @@ const AsyncAwaitWebsocket = (
 
   ws.sendAsync = (event, data, timeout = 3000) =>
     new Promise((resolve, reject) => {
-      const trigger = ({ detail }) => {
-        clearTimeout(id);
-        eventTarget.removeEventListener(event, trigger);
-        detail?.error ? reject(refusal(detail)) : resolve(detail);
-      };
+      const call = (state.calls += 1);
 
-      const id = setTimeout(() => {
-        eventTarget.removeEventListener(event, trigger);
+      const timer = setTimeout(() => {
+        state.pending.delete(call);
         reject(refusal({ error: "WebSocket error (client): request timed out" }));
       }, timeout);
 
-      state.socket.send(JSON.stringify([event, data]));
-      eventTarget.addEventListener(event, trigger);
+      state.pending.set(call, {
+        event,
+        settle: (detail) => {
+          clearTimeout(timer);
+          state.pending.delete(call);
+          detail?.error ? reject(refusal(detail)) : resolve(detail);
+        },
+      });
+
+      state.socket.send(JSON.stringify([event, data, call]));
     });
 
   ws.on = (event, callback) => {
@@ -77,9 +81,17 @@ const AsyncAwaitWebsocket = (
   );
 
   ws.addEventListener("message", ({ data }) => {
-    const [event, detail] = JSON.parse(data);
+    const [event, detail, call] = JSON.parse(data);
 
     if (AUTH_EVENTS.includes(event) && !detail?.error) state.token = detail?.token;
+
+    // A server older than 3.8.0 echoes no call id, so its reply answers the oldest call of that event.
+    const answered =
+      call === undefined
+        ? [...state.pending.values()].find((one) => one.event === event)
+        : state.pending.get(call);
+
+    answered?.settle(detail);
 
     eventTarget.dispatchEvent(new CustomEvent(event, { detail }));
   });

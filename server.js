@@ -77,9 +77,10 @@ export default async (
   const clientPool = {};
 
   // Every frame the server sends goes through here, so `on.send` sees all of them.
-  const send = (ws, event, data) => {
+  // A reply carries the call id its request came with, so concurrent calls of one event each get their own.
+  const send = (ws, event, data, call = undefined) => {
     on.send?.(ws, event, data);
-    ws.send(JSON.stringify([event, data]));
+    ws.send(JSON.stringify(call === undefined ? [event, data] : [event, data, call]));
   };
 
   const broadcast = (body, ws = undefined) =>
@@ -139,10 +140,10 @@ export default async (
     websocket: {
       maxPayloadLength,
       message: (ws, msg) => {
-        let event, body;
+        let event, body, call;
 
         try {
-          [event, body] = JSON.parse(msg.toString());
+          [event, body, call] = JSON.parse(msg.toString());
         } catch {
           return;
         }
@@ -154,7 +155,7 @@ export default async (
         if (!func) {
           const error = `Unknown event: ${event}`;
           console.error(error, "— registered:", Object.keys(endpoints));
-          send(ws, event, { error });
+          send(ws, event, { error }, call);
           return;
         }
 
@@ -163,7 +164,7 @@ export default async (
           : guarded(event) && `Authentication is not enabled — ${event} is unreachable`;
 
         if (denied) {
-          send(ws, event, { error: denied });
+          send(ws, event, { error: denied }, call);
           return;
         }
 
@@ -190,7 +191,7 @@ export default async (
             error = err.message || String(err);
           }
 
-          async && send(ws, event, error ? { error } : result);
+          async && send(ws, event, error ? { error } : result, call);
 
           typeof log === "function" &&
             log(

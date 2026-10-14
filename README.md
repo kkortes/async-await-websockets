@@ -431,6 +431,10 @@ ws.on('open', () => {
 - `payload` (any, default `undefined`)
 - `timeout in ms` (integer, default `3000`)
 
+Each call goes out as `[event, payload, id]`, and the server answers with the same id, so several
+calls of one event in flight at once each resolve with their own reply. A server older than 3.8.0
+answers `[event, data]` with no id, and its reply settles the oldest pending call of that event.
+
 ## Error handling
 
 When calling `ws.sendAsync('some-event')` there are two possible failures:
