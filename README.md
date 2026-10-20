@@ -425,6 +425,22 @@ ws.on('open', () => {
 });
 ```
 
+### Client options
+
+`aaw(url, options)` takes an optional second argument:
+
+- `reconnectInterval` (integer, default `1000`): how long to wait after a close before connecting again.
+- `token` (string): a session token to resume on the first open.
+- `socket` (function, default `(url, protocol) => new WebSocket(url, protocol)`): opens the transport. The client
+  calls it on the first connect and again on every reconnect. It gets the url and the socket id as the protocol,
+  and returns anything shaped like a `WebSocket`: `send`, `close`, a `protocol` and `open`, `message`, `close`
+  and `error` events through `addEventListener`. That lets aaw run over something other than a websocket, such
+  as a WebRTC data channel, with the server on the far end bridged into an aaw server as usual.
+
+```
+const ws = aaw('peer', { socket: (url, protocol) => dataChannelSocket(url, protocol) });
+```
+
 ### `ws.sendAsync` parameters:
 
 - `event name` (string, required)

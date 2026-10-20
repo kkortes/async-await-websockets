@@ -21,9 +21,9 @@ const AsyncAwaitWebsocket = (
   state = { eventTarget: new EventTarget(), token: options.token, pending: new Map(), calls: 0 },
 ) => {
   const { eventTarget } = state;
-  const { reconnectInterval = 1000 } = options;
+  const { reconnectInterval = 1000, socket = (address, protocol) => new WebSocket(address, protocol) } = options;
 
-  const ws = new WebSocket(url, generateID());
+  const ws = socket(url, generateID());
   ws.sid = ws.protocol;
   state.socket = ws;
 
