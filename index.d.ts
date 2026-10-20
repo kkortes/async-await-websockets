@@ -12,6 +12,12 @@ export type AsyncAwaitWebsocket = WebSocket & {
   sendAsync: (event: string, data: any, timeout?: number) => any;
 };
 
+export type ClientOptions = {
+  reconnectInterval?: number;
+  token?: string;
+  socket?: (url: string, protocol: string) => WebSocket | (EventTarget & Pick<WebSocket, "send" | "close" | "protocol">);
+};
+
 export type AuthProvider =
   | "sqlite"
   | { name: "sqlite" }

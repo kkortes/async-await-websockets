@@ -2,6 +2,12 @@
 
 All notable changes to this project are documented here. This project adheres to [Semantic Versioning](https://semver.org/).
 
+## [3.9.0]
+
+### Added
+
+- **The client's transport is pluggable.** `aaw(url, { socket })` takes a function `(url, protocol) => socket` that opens the connection, called on the first connect and on every reconnect. It returns anything shaped like a `WebSocket`: `send`, `close`, a `protocol`, and `open`, `message`, `close` and `error` events. The client hard-coded `new WebSocket(url)`, so an app could not carry aaw over anything else, such as a WebRTC data channel to a server it cannot reach directly. Omitted, the client opens a `WebSocket` as before.
+
 ## [3.8.0]
 
 ### Fixed
