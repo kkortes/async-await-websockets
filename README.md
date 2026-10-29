@@ -453,6 +453,4 @@ In both cases `sendAsync` will throw an object that contains an error-message li
 ## Publishing
 
 - `bun publish:async-await-websockets:check` — dry-run `npm pack` to preview the published tarball.
-- `bun publish:async-await-websockets` — runs the check, prompts for a new version (or keeps the current one), and publishes `@ape-egg/async-await-websockets` to npm.
-
-Requires being logged in to npm (`npm login`). The script is never named plain `publish`, because npm runs a script called `publish` again as a lifecycle hook once `npm publish` succeeds, which republishes the same version and fails on the second attempt.
+- Pushing a version tag publishes: `git tag -a v<version>` then `git push --follow-tags`. The tag has to be `v` plus the version in `package.json`, and [`.github/workflows/publish.yml`](.github/workflows/publish.yml) publishes `@ape-egg/async-await-websockets` to npm with provenance through npm trusted publishing. Pushes to `main` publish nothing.

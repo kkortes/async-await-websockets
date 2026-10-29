@@ -1,14 +1,17 @@
 {
   "name": "@ape-egg/async-await-websockets",
-  "version": "3.8.0",
+  "version": "3.8.1",
   "description": "A async/await solution to websockets",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/kkortes/async-await-websockets.git"
+  },
   "main": "server.js",
   "types": "index.d.ts",
   "module": "client.js",
   "type": "module",
   "scripts": {
-    "publish:async-await-websockets:check": "npm pack --dry-run",
-    "publish:async-await-websockets": "bun publish:async-await-websockets:check && ./scripts/publish-async-await-websockets.sh"
+    "publish:async-await-websockets:check": "npm pack --dry-run"
   },
   "files": [
     "server.js",
