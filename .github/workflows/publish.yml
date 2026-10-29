@@ -1,0 +1,26 @@
+name: Publish
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          registry-url: https://registry.npmjs.org
+
+      - name: Tag matches the package version
+        run: test "$GITHUB_REF_NAME" = "v$(node -p "require('./package.json').version")"
+
+      - run: npm publish --provenance --access public
